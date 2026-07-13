@@ -8,7 +8,9 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/web",
@@ -21,12 +23,9 @@
             "input": "apps/web/public"
           }
         ],
-        "styles": ["apps/web/src/styles.scss"],
-        "server": "apps/web/src/main.server.ts",
-        "ssr": {
-          "entry": "apps/web/src/server.ts"
-        },
-        "outputMode": "server"
+        "styles": [
+          "apps/web/src/styles.scss"
+        ]
       },
       "configurations": {
         "production": {
@@ -79,7 +78,7 @@
       "options": {
         "buildTarget": "web:build",
         "port": 4200,
-        "staticFilePath": "dist/apps/web/browser",
+        "staticFilePath": "dist/apps/web",
         "spa": true
       }
     }
