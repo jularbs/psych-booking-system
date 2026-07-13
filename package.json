@@ -2,7 +2,13 @@
   "name": "@booking-platform/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "dev:api": "pnpm nx serve api",
+    "dev:web": "pnpm nx serve web",
+    "test:api": "pnpm nx test api",
+    "lint:all": "pnpm nx run-many -t lint --all",
+    "build:all": "pnpm nx run-many -t build --all"
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "~21.2.0",
