@@ -31,7 +31,7 @@ jobs:
         run: pnpm nx run-many -t lint --all
 
       - name: Test
-        run: pnpm nx run-many -t test --all --passWithNoTests
+        run: pnpm nx run-many -t test --all
 
       - name: Build
         run: pnpm nx run-many -t build --projects=api,web
