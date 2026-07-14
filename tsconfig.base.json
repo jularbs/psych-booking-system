@@ -15,7 +15,9 @@
     "skipDefaultLibCheck": true,
     "paths": {
       "@platform/shared-types": ["./shared/types/src/index.ts"],
-      "@platform/shared-utils": ["./shared/utils/src/index.ts"]
+      "@platform/shared-utils": ["./shared/utils/src/index.ts"],
+      "@booking-platform/web-core": ["./shared/web-core/src/index.ts"],
+      "@booking-platform/web-shared": ["./shared/web-shared/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
