@@ -1,10 +1,12 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 
 import helmet from 'helmet';
 import compression from 'compression';
+import { ResponseEnvelopeInterceptor } from './common/interceptors/response-envelope.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -38,6 +40,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  app.useGlobalInterceptors(new ResponseEnvelopeInterceptor());
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Psych Booking API')
