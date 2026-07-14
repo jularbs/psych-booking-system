@@ -10,3 +10,7 @@ allowBuilds:
 autoInstallPeers: true
 onlyBuiltDependencies:
   - nx
+packages:
+  - 'apps/*'
+  - 'shared/*'
+  - 'infra/*'
