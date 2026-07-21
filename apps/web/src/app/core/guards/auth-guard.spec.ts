@@ -19,9 +19,7 @@ describe('authGuard', () => {
       ],
     });
 
-    const result = TestBed.runInInjectionContext(() =>
-      authGuard({} as never, {} as never),
-    );
+    const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
     expect(result).toBe(true);
   });
 });

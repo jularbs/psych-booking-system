@@ -16,12 +16,7 @@ export class LoggerService implements NestLoggerService {
     );
   }
 
-  error(
-    message: string,
-    trace?: string,
-    context?: string,
-    meta?: LogContext,
-  ): void {
+  error(message: string, trace?: string, context?: string, meta?: LogContext): void {
     console.error(
       JSON.stringify({
         level: 'error',
