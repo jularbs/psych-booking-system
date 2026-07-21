@@ -15,10 +15,7 @@ describe('HttpExceptionFilter', () => {
       }),
     } as unknown as ArgumentsHost;
 
-    filter.catch(
-      new HttpException('Bad Request', HttpStatus.BAD_REQUEST),
-      host,
-    );
+    filter.catch(new HttpException('Bad Request', HttpStatus.BAD_REQUEST), host);
 
     expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
     expect(json).toHaveBeenCalledWith(

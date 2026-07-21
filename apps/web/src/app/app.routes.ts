@@ -6,9 +6,7 @@ export const appRoutes: Routes = [
   {
     path: 'auth/login',
     loadComponent: () =>
-      import('./features/auth/pages/login.component').then(
-        (m) => m.LoginComponent,
-      ),
+      import('./features/auth/pages/login.component').then((m) => m.LoginComponent),
   },
   {
     path: '',

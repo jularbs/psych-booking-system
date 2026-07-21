@@ -15,9 +15,7 @@ describe('ResponseEnvelopeInterceptor', () => {
       handle: () => of({ ok: true }),
     };
 
-    const result = await lastValueFrom(
-      interceptor.intercept(mockContext, mockNext),
-    );
+    const result = await lastValueFrom(interceptor.intercept(mockContext, mockNext));
 
     expect(result).toEqual({ success: true, data: { ok: true } });
   });

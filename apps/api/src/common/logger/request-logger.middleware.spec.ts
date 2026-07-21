@@ -2,9 +2,7 @@ import { RequestLoggerMiddleware } from './request-logger.middleware';
 
 describe('RequestLoggerMiddleware', () => {
   it('should be defined', () => {
-    expect(
-      new RequestLoggerMiddleware({ log: jest.fn() } as never),
-    ).toBeDefined();
+    expect(new RequestLoggerMiddleware({ log: jest.fn() } as never)).toBeDefined();
   });
 
   it('sets x-request-id on response and logs lifecycle', () => {
@@ -30,10 +28,7 @@ describe('RequestLoggerMiddleware', () => {
 
     middleware.use(req, res, next);
 
-    expect(res.setHeader).toHaveBeenCalledWith(
-      'x-request-id',
-      expect.any(String),
-    );
+    expect(res.setHeader).toHaveBeenCalledWith('x-request-id', expect.any(String));
     expect(next).toHaveBeenCalled();
     expect(logger.log).toHaveBeenCalledTimes(2);
   });

@@ -1,8 +1,4 @@
-export type UserRole =
-  | 'PLATFORM_ADMIN'
-  | 'PSYCHOLOGIST'
-  | 'ASSISTANT'
-  | 'CUSTOMER';
+export type UserRole = 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'CUSTOMER';
 
 export interface AuthUser {
   id: string;
