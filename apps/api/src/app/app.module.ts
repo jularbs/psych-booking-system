@@ -7,8 +7,16 @@ import { ConfigurationModule } from '../common/config/configuration.module';
 import { HealthModule } from '../modules/health/health.module';
 import { RequestLoggerMiddleware } from '../common/logger/request-logger.middleware';
 import { LoggerModule } from '../common/logger/logger.module';
+import { UsersModule } from '../modules/users/users.module';
 @Module({
-  imports: [ConfigurationModule, LoggerModule, HealthModule, DatabaseModule, AuthModule],
+  imports: [
+    ConfigurationModule,
+    LoggerModule,
+    HealthModule,
+    DatabaseModule,
+    AuthModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
