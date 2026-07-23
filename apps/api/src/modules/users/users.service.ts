@@ -18,4 +18,8 @@ export class UsersService {
   create(params: { email: string; password_hash: string; role?: UserRole }): Promise<UsersTable> {
     return this.usersRepository.create(params);
   }
+
+  updateRefreshTokenHash(userId: string, refreshTokenHash: string | null): Promise<void> {
+    return this.usersRepository.updateRefreshTokenHash(userId, refreshTokenHash);
+  }
 }

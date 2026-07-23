@@ -27,6 +27,7 @@ export class UsersRepository {
       email: params.email.toLowerCase(),
       password_hash: params.password_hash,
       role: params.role ?? 'GUEST',
+      refresh_token_hash: null,
       created_at: now,
       updated_at: now,
     };
@@ -34,5 +35,13 @@ export class UsersRepository {
     await this.db.insertInto('users').values(newUser).execute();
 
     return newUser;
+  }
+
+  async updateRefreshTokenHash(userId: string, refreshTokenHash: string | null): Promise<void> {
+    await this.db
+      .updateTable('users')
+      .set({ refresh_token_hash: refreshTokenHash, updated_at: new Date().toISOString() })
+      .where('id', '=', userId)
+      .execute();
   }
 }

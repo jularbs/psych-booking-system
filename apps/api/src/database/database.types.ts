@@ -5,6 +5,7 @@ export interface UsersTable {
   email: string;
   password_hash: string;
   role: UserRole;
+  refresh_token_hash: string | null;
   created_at: string;
   updated_at: string;
 }
