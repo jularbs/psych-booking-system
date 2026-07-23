@@ -10,6 +10,7 @@ describe('AuthService', () => {
     findByEmail: vi.fn(),
     create: vi.fn(),
     findById: vi.fn(),
+    updateRefreshTokenHash: vi.fn(),
   };
 
   const passwordService = {
@@ -25,7 +26,7 @@ describe('AuthService', () => {
   let service: AuthService;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -67,10 +68,11 @@ describe('AuthService', () => {
       email: 'newuser@example.com',
       password_hash: 'hashedPassword',
       role: 'GUEST',
+      refresh_token_hash: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-    jwtService.sign.mockReturnValue('jwtToken');
+    jwtService.sign.mockReturnValueOnce('jwtToken').mockReturnValueOnce('refreshToken');
 
     const result = await service.register({
       email: 'newuser@example.com',
@@ -85,6 +87,7 @@ describe('AuthService', () => {
     });
     expect(result).toEqual({
       access_token: 'jwtToken',
+      refresh_token: 'refreshToken',
       token_type: 'Bearer',
       expires_in: 3600,
     });
@@ -103,6 +106,7 @@ describe('AuthService', () => {
       id: 'user-id',
       email: 'existinguser@example.com',
       password_hash: 'hashedPassword',
+      refresh_token_hash: null,
       role: 'GUEST',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -114,26 +118,99 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('login returns a token if credentials are correct', async () => {
+  it('login stores refresh token and returns tokens if credentials are correct', async () => {
     usersService.findByEmail.mockResolvedValue({
       id: 'user-id',
       email: 'user@example.com',
       password_hash: 'hashedPassword',
+      refresh_token_hash: null,
       role: 'GUEST',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-    passwordService.verify.mockResolvedValue(true);
-    jwtService.sign.mockReturnValue('jwtToken');
+    passwordService.verify.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+    jwtService.sign.mockReturnValueOnce('jwtToken').mockReturnValueOnce('refreshToken');
 
     const result = await service.login({ email: 'user@example.com', password: 'correctPassword' });
 
     expect(passwordService.verify).toHaveBeenCalledWith('correctPassword', 'hashedPassword');
     expect(result).toEqual({
       access_token: 'jwtToken',
-
+      refresh_token: 'refreshToken',
       token_type: 'Bearer',
       expires_in: 3600,
     });
+  });
+
+  it('refresh token throws unauthorized if user does not exist', async () => {
+    usersService.findById.mockResolvedValue(undefined);
+
+    await expect(service.refresh('missing-user-id', 'someRefreshToken')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('refresh token throws unauthorized if refresh token is missing', async () => {
+    usersService.findById.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      password_hash: 'hashedPassword',
+      refresh_token_hash: null,
+      role: 'GUEST',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    await expect(service.refresh('user-id', 'someRefreshToken')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('refresh token throws unauthorized if refresh token is invalid', async () => {
+    usersService.findById.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      password_hash: 'hashedPassword',
+      refresh_token_hash: 'hashedRefreshToken',
+      role: 'GUEST',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(service.refresh('user-id', 'invalidRefreshToken')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('refresh token returns new tokens if refresh token is valid', async () => {
+    usersService.findById.mockResolvedValue({
+      id: 'user-id',
+      email: 'user@example.com',
+      password_hash: 'hashedPassword',
+      refresh_token_hash: 'hashedRefreshToken',
+      role: 'GUEST',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    passwordService.verify.mockResolvedValue(true);
+    passwordService.hash.mockResolvedValue('new-hashed-refresh-token');
+    jwtService.sign.mockReturnValueOnce('newJwtToken').mockReturnValueOnce('newRefreshToken');
+
+    const result = await service.refresh('user-id', 'validRefreshToken');
+
+    expect(passwordService.verify).toHaveBeenCalledWith('validRefreshToken', 'hashedRefreshToken');
+    expect(result).toEqual({
+      access_token: 'newJwtToken',
+      refresh_token: 'newRefreshToken',
+      token_type: 'Bearer',
+      expires_in: 3600,
+    });
+  });
+
+  it('logout clears refresh token hash', async () => {
+    await service.logout('user-1');
+
+    expect(usersService.updateRefreshTokenHash).toHaveBeenCalledWith('user-1', null);
   });
 });

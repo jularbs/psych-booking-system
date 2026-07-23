@@ -15,17 +15,32 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  private issueAccessToken(user: UsersTable): AuthTokenResponse {
+  private async issueAndPersistTokens(user: UsersTable): Promise<AuthTokenResponse> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
     };
 
-    const accessToken = this.jwtService.sign(payload);
+    const jwtSecret = process.env.JWT_SECRET;
+    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '1h', // 1 hour
+      secret: jwtSecret,
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: '7d',
+      secret: jwtRefreshSecret,
+    });
+
+    const hashedRefreshToken = await this.passwordService.hash(refreshToken);
+    await this.usersService.updateRefreshTokenHash(user.id, hashedRefreshToken);
 
     return {
       access_token: accessToken,
+      refresh_token: refreshToken,
       token_type: 'Bearer',
       expires_in: 3600, // 1 hour in seconds
     };
@@ -46,7 +61,7 @@ export class AuthService {
       role: dto.role,
     });
 
-    return this.issueAccessToken(user);
+    return this.issueAndPersistTokens(user);
   }
 
   async login(dto: LoginDto): Promise<AuthTokenResponse> {
@@ -62,10 +77,33 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.issueAccessToken(user);
+    return this.issueAndPersistTokens(user);
+  }
+
+  async logout(userId: string): Promise<void> {
+    await this.usersService.updateRefreshTokenHash(userId, null);
   }
 
   async me(userId: string): Promise<UsersTable | undefined> {
     return this.usersService.findById(userId);
+  }
+
+  async refresh(userId: string, refreshToken: string): Promise<AuthTokenResponse> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user || !user.refresh_token_hash) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const isRefreshTokenValid = await this.passwordService.verify(
+      refreshToken,
+      user.refresh_token_hash,
+    );
+
+    if (!isRefreshTokenValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return this.issueAndPersistTokens(user);
   }
 }

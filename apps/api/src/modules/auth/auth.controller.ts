@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RefreshJwtGuard } from '../../common/guards/refresh-jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -34,6 +35,35 @@ export class AuthController {
       id: user.id,
       email: user.email,
       role: user.role,
+    };
+  }
+
+  @UseGuards(RefreshJwtGuard)
+  @Post('refresh')
+  async refresh(@Req() req: { user?: { sub?: string; refreshToken?: string } }) {
+    const userId = req.user?.sub;
+    const refreshToken = req.user?.refreshToken;
+
+    if (!userId || !refreshToken) {
+      throw new UnauthorizedException('Refresh token not found in request');
+    }
+
+    return this.authService.refresh(userId, refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: { user?: { sub?: string } }) {
+    const userId = req.user?.sub;
+
+    if (!userId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    await this.authService.logout(userId);
+
+    return {
+      success: true,
     };
   }
 }
