@@ -224,6 +224,12 @@ importers:
       angular-eslint:
         specifier: ^21.2.0
         version: 21.4.0(@angular/cli@21.2.19(@types/node@22.20.1)(chokidar@5.0.0))(chokidar@5.0.0)(eslint@9.39.5(jiti@2.7.0))(typescript-eslint@8.63.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(typescript@5.9.3)
+      dbmate:
+        specifier: ^2.34.1
+        version: 2.34.1
+      dotenv-cli:
+        specifier: ^7.4.4
+        version: 7.4.4
       eslint:
         specifier: ^9.8.0
         version: 9.39.5(jiti@2.7.0)
@@ -2089,6 +2095,62 @@ packages:
         integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==,
       }
     engines: { node: '>=20.19.0' }
+
+  '@dbmate/darwin-arm64@2.34.1':
+    resolution:
+      {
+        integrity: sha512-Ez6UWKuws/E/yMGgVyUZ5ngbe/hMYFOV31pZIwTp7dcT8yGL4JV5ayOYbHHnvwiX9Ram28p7JwXntDh1jI2TFw==,
+      }
+    cpu: [arm64]
+    os: [darwin]
+
+  '@dbmate/darwin-x64@2.34.1':
+    resolution:
+      {
+        integrity: sha512-aAGZCFum2PeAsbQXeKorIjjn8tbhCSCOYEILLCeAe++egPLk6dttXwf+5sLeBFtnZfy47tb3vgo07MKVMCcOWQ==,
+      }
+    cpu: [x64]
+    os: [darwin]
+
+  '@dbmate/linux-arm64@2.34.1':
+    resolution:
+      {
+        integrity: sha512-TXxc8l8vnNrAqqEUgIkSjJ4ILyHd8a7iRUcRl8BJ/8l7tfHuscffCMxDB5+NOz/d10HnUcaJcOXerpIzPlpORA==,
+      }
+    cpu: [arm64]
+    os: [linux]
+
+  '@dbmate/linux-arm@2.34.1':
+    resolution:
+      {
+        integrity: sha512-rOFS9es48gYdUHPN/MDbNueWWEL7BEtglehPFMg6kUnKykBifde4EoEReiK8/okiCvtdOYPBFOio7vWQ4nwlPg==,
+      }
+    cpu: [arm]
+    os: [linux]
+
+  '@dbmate/linux-ia32@2.34.1':
+    resolution:
+      {
+        integrity: sha512-wiR1ai3+KKYfZTcLZx430hAqmE2hA5hCCZG/hMwnQgERU3ziygpAheuw0fEC5TYcS3KltldtGSLEd7ls+pdNDQ==,
+      }
+    cpu: [ia32]
+    os: [linux]
+
+  '@dbmate/linux-x64@2.34.1':
+    resolution:
+      {
+        integrity: sha512-cJ4B+SKqgJaIAfF5lgUUe50j3dYAczlWolL47qXLiTqAlut+KmGvL0kxdRiUYAOtSml+jEu1mqRXLHv5EX4ZmQ==,
+      }
+    cpu: [x64]
+    os: [linux]
+
+  '@dbmate/win32-x64@2.34.1':
+    resolution:
+      {
+        integrity: sha512-HmrBbB+Hsc3u9sDa40q656Nu9RnNP26nI8NbYwuypikElI4DTJbSUC5qktMrKYruk9FRZqXA2TpkCcDxhr3rXQ==,
+      }
+    cpu: [x64]
+    os: [win32]
 
   '@discoveryjs/json-ext@0.6.3':
     resolution:
@@ -7373,6 +7435,13 @@ packages:
       }
     engines: { node: '>=20' }
 
+  dbmate@2.34.1:
+    resolution:
+      {
+        integrity: sha512-fB+M/mnR0b6uyaPTK4ng7CDb2dHsEnxdkUCkQKiNq/I9mwExb/W11UEmhmdcxpBRm30I+E5TApf15PfDpEnEZA==,
+      }
+    hasBin: true
+
   debug@2.6.9:
     resolution:
       {
@@ -7566,6 +7635,20 @@ packages:
       {
         integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==,
       }
+
+  dotenv-cli@7.4.4:
+    resolution:
+      {
+        integrity: sha512-XkBYCG0tPIes+YZr4SpfFv76SQrV/LeCE8CI7JSEMi3VR9MvTihCGTOtbIexD6i2mXF+6px7trb1imVCXSNMDw==,
+      }
+    hasBin: true
+
+  dotenv-expand@10.0.0:
+    resolution:
+      {
+        integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==,
+      }
+    engines: { node: '>=12' }
 
   dotenv-expand@12.0.3:
     resolution:
@@ -15827,6 +15910,27 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.0': {}
 
+  '@dbmate/darwin-arm64@2.34.1':
+    optional: true
+
+  '@dbmate/darwin-x64@2.34.1':
+    optional: true
+
+  '@dbmate/linux-arm64@2.34.1':
+    optional: true
+
+  '@dbmate/linux-arm@2.34.1':
+    optional: true
+
+  '@dbmate/linux-ia32@2.34.1':
+    optional: true
+
+  '@dbmate/linux-x64@2.34.1':
+    optional: true
+
+  '@dbmate/win32-x64@2.34.1':
+    optional: true
+
   '@discoveryjs/json-ext@0.6.3': {}
 
   '@discoveryjs/json-ext@1.1.0': {}
@@ -19682,6 +19786,16 @@ snapshots:
       whatwg-mimetype: 5.0.0
       whatwg-url: 15.1.0
 
+  dbmate@2.34.1:
+    optionalDependencies:
+      '@dbmate/darwin-arm64': 2.34.1
+      '@dbmate/darwin-x64': 2.34.1
+      '@dbmate/linux-arm': 2.34.1
+      '@dbmate/linux-arm64': 2.34.1
+      '@dbmate/linux-ia32': 2.34.1
+      '@dbmate/linux-x64': 2.34.1
+      '@dbmate/win32-x64': 2.34.1
+
   debug@2.6.9:
     dependencies:
       ms: 2.0.0
@@ -19762,6 +19876,15 @@ snapshots:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
+
+  dotenv-cli@7.4.4:
+    dependencies:
+      cross-spawn: 7.0.6
+      dotenv: 16.6.1
+      dotenv-expand: 10.0.0
+      minimist: 1.2.8
+
+  dotenv-expand@10.0.0: {}
 
   dotenv-expand@12.0.3:
     dependencies:
