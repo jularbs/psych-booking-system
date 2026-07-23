@@ -7,6 +7,10 @@
     <label for="password">Password</label>
     <input id="password" formControlName="password" type="password" />
 
-    <button type="submit">Login</button>
+    <button type="submit" [disabled]="isSubmitting()">Login</button>
+
+    @if (errorMessage()) {
+      <p class="error-message">{{ errorMessage() }}</p>
+    }
   </form>
 </section>

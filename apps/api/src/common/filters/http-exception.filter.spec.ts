@@ -5,8 +5,8 @@ describe('HttpExceptionFilter', () => {
   it('formats HttpException responses consistently', () => {
     const filter = new HttpExceptionFilter();
 
-    const json = jest.fn();
-    const status = jest.fn().mockReturnValue({ json });
+    const json = vi.fn();
+    const status = vi.fn().mockReturnValue({ json });
 
     const host = {
       switchToHttp: () => ({

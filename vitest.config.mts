@@ -1,0 +1,9 @@
+/// <reference types='vitest' />
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    include: ['.vitest-root-never-runs.spec.ts'],
+    projects: ['**/vite.config.{mjs,js,ts,mts}', '**/vitest.config.{mjs,js,ts,mts}'],
+  },
+});
