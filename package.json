@@ -11,7 +11,15 @@
     "dev:api": "pnpm nx serve api",
     "dev:web": "pnpm nx serve web",
     "test:api": "pnpm nx test api",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:ps": "docker compose ps",
+    "db:migration:new": "dotenv -e .env -- dbmate new",
+    "db:migrate": "dotenv -e .env -- dbmate --url \"$DATABASE_URL\" up",
+    "db:rollback": "dotenv -e .env -- dbmate --url \"$DATABASE_URL\" rollback",
+    "db:status": "dotenv -e .env -- dbmate --url \"$DATABASE_URL\" status"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,scss,yml,yaml}": [
@@ -60,6 +68,8 @@
     "@vitest/coverage-v8": "~4.1.0",
     "@vitest/ui": "~4.1.0",
     "angular-eslint": "^21.2.0",
+    "dbmate": "^2.34.1",
+    "dotenv-cli": "^7.4.4",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-playwright": "^1.6.2",
