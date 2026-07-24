@@ -10,6 +10,19 @@ export interface UsersTable {
   updated_at: string;
 }
 
+export interface ServicesTable {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price_amount: string;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   users: UsersTable;
+  services: ServicesTable;
 }
