@@ -45,8 +45,8 @@ export class LoginComponent {
       .subscribe({
         next: (result) => {
           this.authService.setSession({
-            access_token: result.accessToken,
-            refresh_token: result.refreshToken,
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
           });
           void this.router.navigate(['/dashboard']);
         },

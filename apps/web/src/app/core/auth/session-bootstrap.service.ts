@@ -1,8 +1,10 @@
-import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthApiService } from './auth-api.service';
 import { AuthService } from './auth.service';
+import { AuthStateService } from './auth-state.service';
+import { SessionRefreshService } from './session-refresh.service';
 
 @Injectable({
   providedIn: 'root',
@@ -10,36 +12,30 @@ import { AuthService } from './auth.service';
 export class SessionBootstrapService {
   private readonly authApiService = inject(AuthApiService);
   private readonly authService = inject(AuthService);
+  private readonly authStateService = inject(AuthStateService);
+  private readonly sessionRefreshService = inject(SessionRefreshService);
 
-  bootstrap(): Observable<void> {
+  async bootstrap(): Promise<void> {
     const accessToken = this.authService.getAccessToken();
+
     if (accessToken) {
-      return this.authApiService.me().pipe(
-        map(() => undefined),
-        catchError(() => {
-          this.authService.clearSession();
-          return of(undefined);
-        }),
-      );
+      try {
+        const user = await firstValueFrom(this.authApiService.me());
+        this.authStateService.setAuthenticated(user);
+        return;
+      } catch {
+        this.authService.clearSession();
+        this.authStateService.clear();
+        return;
+      }
     }
 
     const refreshToken = this.authService.getRefreshToken();
+
     if (!refreshToken) {
-      return of(undefined);
+      return;
     }
 
-    return this.authApiService.refresh(refreshToken).pipe(
-      tap((tokens) => {
-        this.authService.setSession({
-          access_token: tokens.accessToken,
-          refresh_token: tokens.refreshToken,
-        });
-      }),
-      map(() => undefined),
-      catchError(() => {
-        this.authService.clearSession();
-        return of(undefined);
-      }),
-    );
+    await this.sessionRefreshService.refreshSession();
   }
 }
