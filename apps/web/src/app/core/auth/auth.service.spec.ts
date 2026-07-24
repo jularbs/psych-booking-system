@@ -10,14 +10,14 @@ describe('AuthService', () => {
   });
 
   it('stores and reads access token', () => {
-    service.setSession({ access_token: 'test-token', refresh_token: 'test-refresh-token' });
+    service.setSession({ accessToken: 'test-token', refreshToken: 'test-refresh-token' });
     expect(service.getAccessToken()).toBe('test-token');
     expect(service.getRefreshToken()).toBe('test-refresh-token');
     expect(service.isAuthenticated()).toBe(true);
   });
 
   it('clears session', () => {
-    service.setSession({ access_token: 'test-token', refresh_token: 'test-refresh-token' });
+    service.setSession({ accessToken: 'test-token', refreshToken: 'test-refresh-token' });
     service.clearSession();
     expect(service.getAccessToken()).toBeNull();
     expect(service.getRefreshToken()).toBeNull();

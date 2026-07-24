@@ -27,7 +27,12 @@ describe('AuthApiService', () => {
 
   it('calls /auth/login with the provided payload', () => {
     const payload = { email: 'alice@example.com', password: 'Password123!' };
-    const response = { accessToken: 'access-token', refreshToken: 'refresh-token' };
+    const response = {
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      token_type: 'Bearer' as const,
+      expires_in: 3600,
+    };
     apiClientMock.post.mockReturnValue(of(response));
 
     service.login(payload).subscribe();
@@ -37,9 +42,19 @@ describe('AuthApiService', () => {
 
   it('returns the api client response observable', async () => {
     const payload = { email: 'alice@example.com', password: 'Password123!' };
-    const response = { accessToken: 'access-token', refreshToken: 'refresh-token' };
+    const response = {
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      token_type: 'Bearer' as const,
+      expires_in: 3600,
+    };
     apiClientMock.post.mockReturnValue(of(response));
 
-    await expect(firstValueFrom(service.login(payload))).resolves.toEqual(response);
+    await expect(firstValueFrom(service.login(payload))).resolves.toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      tokenType: 'Bearer',
+      expiresIn: 3600,
+    });
   });
 });

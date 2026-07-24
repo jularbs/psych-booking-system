@@ -31,8 +31,8 @@ export class SessionBootstrapService {
     return this.authApiService.refresh(refreshToken).pipe(
       tap((tokens) => {
         this.authService.setSession({
-          access_token: tokens.accessToken,
-          refresh_token: tokens.refreshToken,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
         });
       }),
       map(() => undefined),
