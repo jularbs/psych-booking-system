@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth-guard';
+import { roleGuard } from './core/guards/role-guard';
 
 export const appRoutes: Routes = [
   {
@@ -26,9 +27,24 @@ export const appRoutes: Routes = [
       },
       {
         path: 'booking',
+        canMatch: [roleGuard],
+        data: {
+          roles: ['PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT'],
+        },
         loadComponent: () =>
           import('./features/booking/pages/booking-home.component').then(
             (m) => m.BookingHomeComponent,
+          ),
+      },
+      {
+        path: 'admin',
+        canMatch: [roleGuard],
+        data: {
+          roles: ['PLATFORM_ADMIN'],
+        },
+        loadComponent: () =>
+          import('./features/dashboard/pages/dashboard-home.component').then(
+            (m) => m.DashboardHomeComponent,
           ),
       },
     ],

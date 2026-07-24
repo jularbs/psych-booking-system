@@ -1,9 +1,20 @@
-import { Controller, Post, Get, Req, Body, UseGuards, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { Controller, Get, Post, Body, UnauthorizedException, UseGuards, Req } from '@nestjs/common';
+
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RefreshJwtGuard } from '../../common/guards/refresh-jwt.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+
+type AuthenticatedUser = {
+  sub: string;
+  email: string;
+  role: string;
+  refreshToken?: string;
+};
 
 @Controller('auth')
 export class AuthController {
@@ -19,33 +30,14 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('me')
-  async me(@Req() req: { user?: { sub?: string } }) {
-    const userid = req.user?.sub;
-
-    if (!userid) {
-      throw new UnauthorizedException('User ID not found in request');
-    }
-    const user = await this.authService.me(userid);
-
-    if (!user) throw new UnauthorizedException('User not found');
-
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    };
-  }
-
   @UseGuards(RefreshJwtGuard)
   @Post('refresh')
-  async refresh(@Req() req: { user?: { sub?: string; refreshToken?: string } }) {
+  refresh(@Req() req: { user?: { sub?: string; refreshToken?: string } }) {
     const userId = req.user?.sub;
     const refreshToken = req.user?.refreshToken;
 
     if (!userId || !refreshToken) {
-      throw new UnauthorizedException('Refresh token not found in request');
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     return this.authService.refresh(userId, refreshToken);
@@ -53,9 +45,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: { user?: { sub?: string } }) {
-    const userId = req.user?.sub;
-
+  async logout(@CurrentUser('sub') userId?: string) {
     if (!userId) {
       throw new UnauthorizedException('Unauthorized');
     }
@@ -64,6 +54,56 @@ export class AuthController {
 
     return {
       success: true,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@Req() req: { user?: { sub?: string } }) {
+    const userId = req.user?.sub;
+
+    if (!userId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const user = await this.authService.me(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
+  @Get('staff-area')
+  staffArea(@CurrentUser() user?: AuthenticatedUser) {
+    return {
+      message: 'Staff access granted',
+      user: {
+        id: user?.sub,
+        email: user?.email,
+        role: user?.role,
+      },
+    };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PLATFORM_ADMIN')
+  @Get('admin-area')
+  adminArea(@CurrentUser() user?: AuthenticatedUser) {
+    return {
+      message: 'Admin access granted',
+      user: {
+        id: user?.sub,
+        email: user?.email,
+        role: user?.role,
+      },
     };
   }
 }
