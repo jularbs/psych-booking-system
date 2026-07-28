@@ -1,3 +1,5 @@
+import { Generated } from 'kysely';
+
 export type UserRole = 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'PATIENT' | 'GUEST';
 
 export interface UsersTable {
@@ -11,15 +13,16 @@ export interface UsersTable {
 }
 
 export interface ServicesTable {
-  id: string;
+  id: Generated<string>;
   slug: string;
   name: string;
   description: string | null;
   duration_minutes: number;
   price_amount: string;
   currency: string;
-  created_at: string;
-  updated_at: string;
+  is_active: boolean;
+  created_at: Generated<string>;
+  updated_at: Generated<string> | string;
 }
 
 export interface Database {
