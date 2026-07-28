@@ -8,6 +8,7 @@ import { HealthModule } from '../modules/health/health.module';
 import { RequestLoggerMiddleware } from '../common/logger/request-logger.middleware';
 import { LoggerModule } from '../common/logger/logger.module';
 import { UsersModule } from '../modules/users/users.module';
+import { ServicesModule } from '../modules/services/services.module';
 @Module({
   imports: [
     ConfigurationModule,
@@ -16,6 +17,7 @@ import { UsersModule } from '../modules/users/users.module';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    ServicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
