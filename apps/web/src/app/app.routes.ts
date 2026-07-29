@@ -37,6 +37,17 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'services/manage',
+        canMatch: [roleGuard],
+        data: {
+          roles: ['PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT'],
+        },
+        loadComponent: () =>
+          import('./features/services/pages/services-manage/services-manage.component').then(
+            (m) => m.ServicesManageComponent,
+          ),
+      },
+      {
         path: 'admin',
         canMatch: [roleGuard],
         data: {

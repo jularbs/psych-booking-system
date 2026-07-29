@@ -1,0 +1,23 @@
+<section>
+  <h1>Manage Services</h1>
+
+  @if (isLoading()) {
+    <p>Loading services...</p>
+  }
+  @if (errorMessage()) {
+    <p>{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    <ul>
+      @for (service of services(); track service.id) {
+        <li>
+          <strong>{{ service.name }}</strong>
+          <span> — {{ service.duration_minutes }} mins</span>
+          <span> — {{ service.price_amount }} {{ service.currency }}</span>
+          <span> — {{ service.is_active ? 'Active' : 'Inactive' }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>
