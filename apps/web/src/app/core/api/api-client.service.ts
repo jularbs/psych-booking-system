@@ -26,6 +26,12 @@ export class ApiClientService {
     });
   }
 
+  patch<T>(path: string, body: unknown, options?: ApiRequestOptions): Observable<T> {
+    return this.http.patch<T>(`${this.apiBaseUrl}${path}`, body, {
+      headers: this.buildHeaders(options),
+    });
+  }
+
   private buildHeaders(options?: ApiRequestOptions): HttpHeaders | undefined {
     if (!options?.headers) return undefined;
     return new HttpHeaders(options.headers);

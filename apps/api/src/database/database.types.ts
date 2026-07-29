@@ -1,3 +1,5 @@
+import { ColumnType, GeneratedAlways } from 'kysely';
+
 export type UserRole = 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'PATIENT' | 'GUEST';
 
 export interface UsersTable {
@@ -10,6 +12,20 @@ export interface UsersTable {
   updated_at: string;
 }
 
+export interface ServicesTable {
+  id: GeneratedAlways<string>;
+  slug: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price_amount: string;
+  currency: string;
+  is_active: boolean;
+  created_at: GeneratedAlways<string>;
+  updated_at: ColumnType<string, never, string>;
+}
+
 export interface Database {
   users: UsersTable;
+  services: ServicesTable;
 }
