@@ -24,7 +24,7 @@ export class CreateServiceDto {
   @IsOptional()
   @IsString()
   @MaxLength(2000)
-  description?: string;
+  description?: string | null;
 
   @IsInt()
   @Min(10)

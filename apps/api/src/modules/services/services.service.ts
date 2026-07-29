@@ -32,7 +32,15 @@ export class ServicesService {
       throw new ConflictException('Service slug already exists');
     }
 
-    return this.servicesRepository.create(params);
+    return this.servicesRepository.create({
+      slug: params.slug,
+      name: params.name,
+      description: params.description ?? null,
+      duration_minutes: params.duration_minutes,
+      price_amount: params.price_amount,
+      currency: params.currency,
+      is_active: params.is_active,
+    });
   }
 
   async update(id: string, params: UpdateServiceDto) {

@@ -1,4 +1,4 @@
-import { Generated } from 'kysely';
+import { ColumnType, GeneratedAlways } from 'kysely';
 
 export type UserRole = 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'PATIENT' | 'GUEST';
 
@@ -13,7 +13,7 @@ export interface UsersTable {
 }
 
 export interface ServicesTable {
-  id: Generated<string>;
+  id: GeneratedAlways<string>;
   slug: string;
   name: string;
   description: string | null;
@@ -21,8 +21,8 @@ export interface ServicesTable {
   price_amount: string;
   currency: string;
   is_active: boolean;
-  created_at: Generated<string>;
-  updated_at: Generated<string> | string;
+  created_at: GeneratedAlways<string>;
+  updated_at: ColumnType<string, never, string>;
 }
 
 export interface Database {
