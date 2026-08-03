@@ -5,7 +5,7 @@
   "scripts": {
     "db:test:migrate": "dotenv -e .env.test -- dbmate --url \"$DATABASE_URL\" up",
     "db:test:rollback": "dotenv -e .env.test -- dbmate --url \"$DATABASE_URL\" rollback",
-    "test:api:integration": "dotenv -e .env.test -- nx test api --testPathPattern=integration",
+    "test:api:integration": "dotenv -e .env.test -- vitest run --root apps/api --config vitest.integration.config.mts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:all": "pnpm nx run-many -t lint --all",
