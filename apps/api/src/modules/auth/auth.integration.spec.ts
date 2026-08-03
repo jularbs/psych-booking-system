@@ -3,7 +3,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestApp, TestAppContext } from '../../test-utils/create-test-app';
 import { resetTestDb } from '../../test-utils/reset-test-db';
-import { registerTestUser, type TestUserRegistration } from '../../test-utils/auth-test-helpers';
+import {
+  createAuthenticatedUser,
+  registerTestUser,
+  type TestUserRegistration,
+} from '../../test-utils/auth-test-helpers';
 
 describe('Auth Integration', () => {
   let context: TestAppContext;
@@ -182,5 +186,75 @@ describe('Auth Integration', () => {
 
     expect(refreshResponse.body).toHaveProperty('error');
     expect(refreshResponse.body.error).toHaveProperty('message', 'Invalid refresh token');
+  });
+
+  it('allows access to staff area for authorized roles', async () => {
+    const userPayload: TestUserRegistration = {
+      email: 'user@example.com',
+      password: 'Password123',
+      role: 'ASSISTANT',
+    };
+
+    const user = await createAuthenticatedUser(context.app, userPayload);
+
+    const accessToken = user.access_token;
+
+    const response = await request(context.app.getHttpServer())
+      .get('/auth/staff-area')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.data).toHaveProperty('message', 'Staff access granted');
+    expect(response.body.data.user).toHaveProperty('email', userPayload.email);
+    expect(response.body.data.user).toHaveProperty('role', userPayload.role);
+  });
+
+  it('allows access to admin area for PLATFORM_ADMIN role', async () => {
+    const userPayload: TestUserRegistration = {
+      email: 'admin@example.com',
+      password: 'Password123',
+      role: 'PLATFORM_ADMIN',
+    };
+
+    const user = await createAuthenticatedUser(context.app, userPayload);
+
+    const accessToken = user.access_token;
+
+    const response = await request(context.app.getHttpServer())
+      .get('/auth/admin-area')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.data).toHaveProperty('message', 'Admin access granted');
+    expect(response.body.data.user).toHaveProperty('email', userPayload.email);
+    expect(response.body.data.user).toHaveProperty('role', userPayload.role);
+  });
+
+  it('rejects staff area access without access token', async () => {
+    await request(context.app.getHttpServer()).get('/auth/staff-area').expect(401);
+  });
+
+  it('rejects admin area access without access token', async () => {
+    await request(context.app.getHttpServer()).get('/auth/admin-area').expect(401);
+  });
+
+  it('rejects admin area access for non-admin users', async () => {
+    const userPayload: TestUserRegistration = {
+      email: 'staff@example.com',
+      password: 'Password123',
+      role: 'ASSISTANT',
+    };
+
+    const user = await createAuthenticatedUser(context.app, userPayload);
+
+    const accessToken = user.access_token;
+
+    const response = await request(context.app.getHttpServer())
+      .get('/auth/admin-area')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(403);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Insufficient permissions');
   });
 });
