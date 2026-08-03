@@ -5,9 +5,35 @@ on:
   push:
     branches: [main]
 
+env:
+  NODE_ENV: test
+  PORT: 3001
+  CORS_ORIGIN: http://localhost:4200
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/psych_booking_test?sslmode=disable
+  JWT_SECRET: test-access-secret-please-change
+  JWT_ACCESS_TTL: 15m
+  JWT_REFRESH_SECRET: test-refresh-secret-please-change
+  JWT_REFRESH_TTL: 7d
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: psych_booking_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d psych_booking_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +56,22 @@ jobs:
 
       - name: Lint
         run: pnpm lint:all
+
+      - name: Create .env.test for integration tests
+        run: |
+          cat > .env.test <<'EOF'
+          NODE_ENV=${NODE_ENV}
+          PORT=${PORT}
+          CORS_ORIGIN=${CORS_ORIGIN}
+          DATABASE_URL=${DATABASE_URL}
+          JWT_SECRET=${JWT_SECRET}
+          JWT_ACCESS_TTL=${JWT_ACCESS_TTL}
+          JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+          JWT_REFRESH_TTL=${JWT_REFRESH_TTL}
+          EOF
+
+      - name: Run test DB migrations
+        run: pnpm db:test:migrate
 
       - name: Test
         run: pnpm test:all
