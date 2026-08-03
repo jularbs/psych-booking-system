@@ -1,3 +1,8 @@
+import 'dotenv/config';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { config as loadEnv } from 'dotenv';
+
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Kysely } from 'kysely';
@@ -8,6 +13,11 @@ import { KYSELY } from '../database/database.module';
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import { ResponseEnvelopeInterceptor } from '../common/interceptors/response-envelope.interceptor';
 
+const testEnvPath = resolve(process.cwd(), '.env.test');
+
+if (existsSync(testEnvPath)) {
+  loadEnv({ path: testEnvPath, override: false });
+}
 export interface TestAppContext {
   app: INestApplication;
   db: Kysely<Database>;
