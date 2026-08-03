@@ -5,7 +5,7 @@ export interface AuthTokens {
   access_token: string;
   refresh_token: string;
   token_type: 'Bearer';
-  expires_in: string;
+  expires_in: number;
 }
 
 export interface TestUserRegistration {
@@ -18,10 +18,7 @@ export async function registerTestUser(
   app: INestApplication,
   user: TestUserRegistration,
 ): Promise<AuthTokens> {
-  const response = await request(app.getHttpServer())
-    .post('/api/v1/auth/register')
-    .send(user)
-    .expect(201);
+  const response = await request(app.getHttpServer()).post('/auth/register').send(user).expect(201);
 
   return response.body.data;
 }
@@ -30,10 +27,7 @@ export async function loginTestUser(
   app: INestApplication,
   payload: { email: string; password: string },
 ): Promise<AuthTokens> {
-  const response = await request(app.getHttpServer())
-    .post('/api/v1/auth/login')
-    .send(payload)
-    .expect(201);
+  const response = await request(app.getHttpServer()).post('/auth/login').send(payload).expect(201);
 
   return response.body.data;
 }
