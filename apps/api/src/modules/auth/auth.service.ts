@@ -1,4 +1,5 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PasswordService } from './password.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -6,13 +7,14 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthTokenResponse, JwtPayload } from './auth.types';
 import { UsersTable } from '../../database/database.types';
 import { LoginDto } from './dto/login.dto';
-
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   private async issueAndPersistTokens(user: UsersTable): Promise<AuthTokenResponse> {
@@ -22,8 +24,8 @@ export class AuthService {
       role: user.role,
     };
 
-    const jwtSecret = process.env.JWT_SECRET;
-    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+    const jwtSecret = this.configService.get<string>('jwtSecret');
+    const jwtRefreshSecret = this.configService.get<string>('jwtRefreshSecret');
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '1h', // 1 hour
@@ -32,10 +34,11 @@ export class AuthService {
 
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: '7d',
+      jwtid: randomUUID(),
       secret: jwtRefreshSecret,
     });
 
-    const hashedRefreshToken = await this.passwordService.hash(refreshToken);
+    const hashedRefreshToken = this.passwordService.hashRefreshToken(refreshToken);
     await this.usersService.updateRefreshTokenHash(user.id, hashedRefreshToken);
 
     return {
@@ -95,7 +98,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const isRefreshTokenValid = await this.passwordService.verify(
+    const isRefreshTokenValid = await this.passwordService.verifyRefreshToken(
       refreshToken,
       user.refresh_token_hash,
     );
