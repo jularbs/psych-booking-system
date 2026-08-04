@@ -1,4 +1,6 @@
-import { IsEmail, IsString, MinLength, Matches, IsOptional } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+
+import { USER_ROLES, UserRole } from '../../../database/database.types';
 
 export class RegisterDto {
   @IsEmail()
@@ -13,5 +15,6 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
-  role?: 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'PATIENT' | 'GUEST';
+  @IsIn(USER_ROLES)
+  role?: UserRole;
 }

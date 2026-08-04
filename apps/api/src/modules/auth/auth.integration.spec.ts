@@ -43,7 +43,27 @@ describe('Auth Integration', () => {
     expect(response.body.data.expires_in).toBeTypeOf('number');
   });
 
-  it('rejects invalid registration payload', async () => {
+  it('rejects registration if email already exists', async () => {
+    await registerTestUser(context.app, {
+      email: 'existing@example.com',
+      password: 'Password123',
+      role: 'PLATFORM_ADMIN',
+    });
+
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'existing@example.com',
+        password: 'Password123',
+        role: 'PLATFORM_ADMIN',
+      })
+      .expect(409);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Email already exists');
+  });
+
+  it('rejects registration if email is not valid and has weak password', async () => {
     const response = await request(context.app.getHttpServer())
       .post('/auth/register')
       .send({
@@ -61,6 +81,37 @@ describe('Auth Integration', () => {
     expect(response.body.error.message).toContain(
       'Password must contain at least one uppercase letter',
     );
+  });
+
+  it('rejects registration with invalid role', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'user@example.com',
+        password: 'Password123',
+        role: 'INVALID_ROLE',
+      })
+      .expect(400);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message');
+    expect(response.body.error.message).toContain(
+      'role must be one of the following values: PLATFORM_ADMIN, PSYCHOLOGIST, ASSISTANT, PATIENT, GUEST',
+    );
+  });
+
+  it('rejects registration with missing required fields', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: '',
+        password: '',
+      })
+      .expect(400);
+
+    console.log('Response body:', response.body); // Log the response body for debugging
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message');
   });
 
   it('logs in an existing user and returns token pair', async () => {
@@ -87,6 +138,27 @@ describe('Auth Integration', () => {
   });
 
   it('rejects login with invalid credentials', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'user@example.com',
+        password: 'WrongPassword',
+      })
+      .expect(401);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Invalid credentials');
+  });
+
+  it('rejects login with wrong password for existing user', async () => {
+    // First, register a user
+    await registerTestUser(context.app, {
+      email: 'user@example.com',
+      password: 'Password123',
+      role: 'PATIENT',
+    });
+
+    // Then, attempt to log in with the wrong password
     const response = await request(context.app.getHttpServer())
       .post('/auth/login')
       .send({
