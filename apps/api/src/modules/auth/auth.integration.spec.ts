@@ -43,7 +43,27 @@ describe('Auth Integration', () => {
     expect(response.body.data.expires_in).toBeTypeOf('number');
   });
 
-  it('rejects invalid registration payload', async () => {
+  it('rejects registration if email already exists', async () => {
+    await registerTestUser(context.app, {
+      email: 'existing@example.com',
+      password: 'Password123',
+      role: 'PLATFORM_ADMIN',
+    });
+
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'existing@example.com',
+        password: 'Password123',
+        role: 'PLATFORM_ADMIN',
+      })
+      .expect(409);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Email already exists');
+  });
+
+  it('rejects registration if email is not valid and has weak password', async () => {
     const response = await request(context.app.getHttpServer())
       .post('/auth/register')
       .send({
@@ -61,6 +81,36 @@ describe('Auth Integration', () => {
     expect(response.body.error.message).toContain(
       'Password must contain at least one uppercase letter',
     );
+  });
+
+  it('rejects registration with invalid role', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'user@example.com',
+        password: 'Password123',
+        role: 'INVALID_ROLE',
+      })
+      .expect(400);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message');
+    expect(response.body.error.message).toContain(
+      'role must be one of the following values: PLATFORM_ADMIN, PSYCHOLOGIST, ASSISTANT, PATIENT, GUEST',
+    );
+  });
+
+  it('rejects registration with missing required fields', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: '',
+        password: '',
+      })
+      .expect(400);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message');
   });
 
   it('logs in an existing user and returns token pair', async () => {
@@ -87,6 +137,27 @@ describe('Auth Integration', () => {
   });
 
   it('rejects login with invalid credentials', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'user@example.com',
+        password: 'WrongPassword',
+      })
+      .expect(401);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Invalid credentials');
+  });
+
+  it('rejects login with wrong password for existing user', async () => {
+    // First, register a user
+    await registerTestUser(context.app, {
+      email: 'user@example.com',
+      password: 'Password123',
+      role: 'PATIENT',
+    });
+
+    // Then, attempt to log in with the wrong password
     const response = await request(context.app.getHttpServer())
       .post('/auth/login')
       .send({
@@ -161,6 +232,66 @@ describe('Auth Integration', () => {
     expect(response.body.error).toHaveProperty('message', 'Unauthorized');
   });
 
+  it('rejects token refresh when using access token instead of refresh token', async () => {
+    const userPayload: TestUserRegistration = {
+      email: 'user@example.com',
+      password: 'Password123',
+      role: 'PATIENT',
+    };
+
+    const user = await registerTestUser(context.app, userPayload);
+
+    const accessToken = user.access_token;
+
+    const response = await request(context.app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(401);
+
+    expect(response.body).toHaveProperty('error');
+    expect(response.body.error).toHaveProperty('message', 'Unauthorized');
+  });
+
+  it('invalidates refresh token after rotation', async () => {
+    const userPayload: TestUserRegistration = {
+      email: 'user@example.com',
+      password: 'Password123',
+      role: 'ASSISTANT',
+    };
+
+    const user = await registerTestUser(context.app, userPayload);
+
+    const refreshToken = user.refresh_token;
+
+    // First refresh
+    const firstRefreshResponse = await request(context.app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Authorization', `Bearer ${refreshToken}`)
+      .expect(201);
+
+    const newRefreshToken = firstRefreshResponse.body.data.refresh_token;
+
+    expect(refreshToken).not.toEqual(newRefreshToken);
+
+    // Attempt to refresh again with the old refresh token
+    const secondRefreshResponse = await request(context.app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Authorization', `Bearer ${refreshToken}`)
+      .expect(401);
+
+    expect(secondRefreshResponse.body).toHaveProperty('error');
+    expect(secondRefreshResponse.body.error).toHaveProperty('message', 'Invalid refresh token');
+
+    // The new refresh token should work
+    const thirdRefreshResponse = await request(context.app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Authorization', `Bearer ${newRefreshToken}`)
+      .expect(201);
+
+    expect(thirdRefreshResponse.body.data).toHaveProperty('access_token');
+    expect(thirdRefreshResponse.body.data.access_token).toBeTypeOf('string');
+  });
+
   it('logs out user and invalidates refresh token', async () => {
     const userPayload: TestUserRegistration = {
       email: 'user@example.com',
@@ -186,6 +317,17 @@ describe('Auth Integration', () => {
 
     expect(refreshResponse.body).toHaveProperty('error');
     expect(refreshResponse.body.error).toHaveProperty('message', 'Invalid refresh token');
+  });
+
+  it('rejects logout without access token', async () => {
+    await request(context.app.getHttpServer()).post('/auth/logout').expect(401);
+  });
+
+  it('rejects logout with invalid token', async () => {
+    await request(context.app.getHttpServer())
+      .post('/auth/logout')
+      .set('Authorization', 'Bearer invalid-access-token')
+      .expect(401);
   });
 
   it('allows access to staff area for authorized roles', async () => {

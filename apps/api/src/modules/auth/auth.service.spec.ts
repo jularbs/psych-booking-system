@@ -4,6 +4,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { PasswordService } from './password.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   const usersService = {
@@ -16,6 +17,8 @@ describe('AuthService', () => {
   const passwordService = {
     hash: vi.fn(),
     verify: vi.fn(),
+    hashRefreshToken: vi.fn(),
+    verifyRefreshToken: vi.fn(),
   };
 
   const jwtService = {
@@ -23,10 +26,26 @@ describe('AuthService', () => {
     verify: vi.fn(),
   };
 
+  const configService = {
+    get: vi.fn((key: string) => {
+      if (key === 'jwtSecret') {
+        return 'test-access-secret';
+      }
+
+      if (key === 'jwtRefreshSecret') {
+        return 'test-refresh-secret';
+      }
+
+      return undefined;
+    }),
+  };
+
   let service: AuthService;
 
   beforeEach(async () => {
     vi.resetAllMocks();
+    configService.get.mockClear();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -41,6 +60,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: jwtService,
+        },
+        {
+          provide: ConfigService,
+          useValue: configService,
         },
       ],
     }).compile();
@@ -73,6 +96,7 @@ describe('AuthService', () => {
       updated_at: new Date().toISOString(),
     });
     jwtService.sign.mockReturnValueOnce('jwtToken').mockReturnValueOnce('refreshToken');
+    passwordService.hashRefreshToken.mockReturnValue('hashedRefreshToken');
 
     const result = await service.register({
       email: 'newuser@example.com',
@@ -130,6 +154,7 @@ describe('AuthService', () => {
     });
     passwordService.verify.mockResolvedValueOnce(true).mockResolvedValueOnce(true);
     jwtService.sign.mockReturnValueOnce('jwtToken').mockReturnValueOnce('refreshToken');
+    passwordService.hashRefreshToken.mockReturnValue('hashedRefreshToken');
 
     const result = await service.login({ email: 'user@example.com', password: 'correctPassword' });
 
@@ -176,7 +201,7 @@ describe('AuthService', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-    passwordService.verify.mockResolvedValue(false);
+    passwordService.verifyRefreshToken.mockReturnValue(false);
 
     await expect(service.refresh('user-id', 'invalidRefreshToken')).rejects.toBeInstanceOf(
       UnauthorizedException,
@@ -193,13 +218,16 @@ describe('AuthService', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
-    passwordService.verify.mockResolvedValue(true);
-    passwordService.hash.mockResolvedValue('new-hashed-refresh-token');
+    passwordService.verifyRefreshToken.mockReturnValue(true);
+    passwordService.hashRefreshToken.mockReturnValue('new-hashed-refresh-token');
     jwtService.sign.mockReturnValueOnce('newJwtToken').mockReturnValueOnce('newRefreshToken');
 
     const result = await service.refresh('user-id', 'validRefreshToken');
 
-    expect(passwordService.verify).toHaveBeenCalledWith('validRefreshToken', 'hashedRefreshToken');
+    expect(passwordService.verifyRefreshToken).toHaveBeenCalledWith(
+      'validRefreshToken',
+      'hashedRefreshToken',
+    );
     expect(result).toEqual({
       access_token: 'newJwtToken',
       refresh_token: 'newRefreshToken',

@@ -1,6 +1,14 @@
 import { ColumnType, GeneratedAlways } from 'kysely';
 
-export type UserRole = 'PLATFORM_ADMIN' | 'PSYCHOLOGIST' | 'ASSISTANT' | 'PATIENT' | 'GUEST';
+export const USER_ROLES = [
+  'PLATFORM_ADMIN',
+  'PSYCHOLOGIST',
+  'ASSISTANT',
+  'PATIENT',
+  'GUEST',
+] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
 
 export interface UsersTable {
   id: string;
