@@ -1,57 +1,62 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, startWith } from 'rxjs';
-import { ServiceRecord } from '../../data-access/services-api.service';
-import { ServicesApiService } from '../../data-access/services-api.service';
-
-type ServicesManageState = {
-  records: ServiceRecord[];
-  isLoading: boolean;
-  errorMessage: string | null;
-};
+import { Component, computed, inject, OnInit } from '@angular/core';
+import { ServiceFormComponent } from '../../components/service-form/service-form.component';
+import {
+  CreateServicePayload,
+  ServiceRecord,
+  UpdateServicePayload,
+} from '../../data-access/services-api.service';
+import { ServicesFilter, ServicesManagePageStore } from './services-manage-page.store';
 
 @Component({
   selector: 'app-services-manage',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ServiceFormComponent],
   templateUrl: './services-manage.component.html',
 })
-export class ServicesManageComponent {
-  private readonly servicesApiService = inject(ServicesApiService);
+export class ServicesManageComponent implements OnInit {
+  private readonly store = inject(ServicesManagePageStore);
 
-  private readonly state = toSignal(
-    this.servicesApiService.listManage().pipe(
-      map(
-        (records): ServicesManageState => ({
-          records,
-          isLoading: false,
-          errorMessage: null,
-        }),
-      ),
-      catchError(() =>
-        of<ServicesManageState>({
-          records: [],
-          isLoading: false,
-          errorMessage: 'Failed to load services.',
-        }),
-      ),
-      startWith<ServicesManageState>({
-        records: [],
-        isLoading: true,
-        errorMessage: null,
-      }),
-    ),
-    {
-      initialValue: {
-        records: [],
-        isLoading: true,
-        errorMessage: null,
-      },
-    },
-  );
+  readonly services = this.store.filteredServices;
+  readonly isLoading = this.store.isLoading;
+  readonly errorMessage = this.store.errorMessage;
+  readonly filter = this.store.filter;
+  readonly editingService = this.store.editingService;
+  readonly isSubmitting = this.store.isSubmitting;
 
-  readonly services = computed(() => this.state().records);
-  readonly isLoading = computed(() => this.state().isLoading);
-  readonly errorMessage = computed(() => this.state().errorMessage);
+  readonly isEditing = computed(() => !!this.editingService());
+
+  ngOnInit(): void {
+    void this.store.load();
+  }
+
+  async handleSave(payload: CreateServicePayload): Promise<void> {
+    const editingService = this.editingService();
+
+    if (editingService) {
+      await this.store.update(editingService.id, payload as UpdateServicePayload);
+      return;
+    }
+    await this.store.create(payload);
+  }
+
+  async deactivate(id: string): Promise<void> {
+    await this.store.deactivate(id);
+  }
+
+  async reactivate(id: string): Promise<void> {
+    await this.store.reactivate(id);
+  }
+
+  edit(service: ServiceRecord): void {
+    this.store.startEditing(service);
+  }
+
+  cancelEditing(): void {
+    this.store.stopEditing();
+  }
+
+  changeFilter(filter: ServicesFilter): void {
+    this.store.setFilter(filter);
+  }
 }

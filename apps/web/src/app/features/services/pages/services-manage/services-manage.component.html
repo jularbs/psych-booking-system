@@ -1,5 +1,8 @@
 <section>
-  <h1>Manage Services</h1>
+  <header>
+    <h1>Manage Services</h1>
+    <p>Create, edit, activate, and deactivate services offered by the practice.</p>
+  </header>
 
   @if (isLoading()) {
     <p>Loading services...</p>
@@ -8,16 +11,44 @@
     <p>{{ errorMessage() }}</p>
   }
 
-  @if (!isLoading() && !errorMessage()) {
-    <ul>
-      @for (service of services(); track service.id) {
-        <li>
-          <strong>{{ service.name }}</strong>
-          <span> — {{ service.duration_minutes }} mins</span>
-          <span> — {{ service.price_amount }} {{ service.currency }}</span>
-          <span> — {{ service.is_active ? 'Active' : 'Inactive' }}</span>
-        </li>
-      }
-    </ul>
+  @if (!isLoading()) {
+    <section>
+      <h2>{{ isEditing() ? 'Edit Service' : 'Create Service' }}</h2>
+
+      <app-service-form
+        [service]="editingService()"
+        [isSubmitting]="isSubmitting()"
+        (save)="handleSave($event)"
+        (cancel)="cancelEditing()"
+      />
+    </section>
+  }
+  @if (!isLoading()) {
+    <section>
+      <h2>Services List</h2>
+      <div>
+        <button type="button" (click)="changeFilter('all')">All</button>
+        <button type="button" (click)="changeFilter('active')">Active</button>
+        <button type="button" (click)="changeFilter('inactive')">Inactive</button>
+      </div>
+      <ul>
+        @for (service of services(); track service.id) {
+          <li>
+            <strong>{{ service.name }}</strong>
+            <span> — {{ service.duration_minutes }} mins</span>
+            <span> — {{ service.price_amount }} {{ service.currency }}</span>
+            <span> — {{ service.is_active ? 'Active' : 'Inactive' }}</span>
+            <div>
+              <button type="button" (click)="edit(service)">Edit</button>
+              @if (service.is_active) {
+                <button type="button" (click)="deactivate(service.id)">Deactivate</button>
+              } @else {
+                <button type="button" (click)="reactivate(service.id)">Activate</button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
   }
 </section>
