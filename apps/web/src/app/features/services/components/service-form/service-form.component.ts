@@ -64,7 +64,12 @@ export class ServiceFormComponent {
       return;
     }
 
-    this.save.emit(this.form.getRawValue());
+    const formValue = this.form.getRawValue();
+
+    this.save.emit({
+      ...formValue,
+      price_amount: Number(formValue.price_amount).toFixed(2),
+    });
   }
 
   onCancel(): void {

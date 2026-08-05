@@ -49,6 +49,32 @@ describe('ServiceFormComponent', () => {
     });
   });
 
+  it('formats price_amount with two decimal places when submitting', () => {
+    const emitSpy = vi.spyOn(component.save, 'emit');
+
+    component.form.setValue({
+      slug: 'initial-consult',
+      name: 'Initial Consultation',
+      description: 'Intro session',
+      duration_minutes: 60,
+      price_amount: '2500',
+      currency: 'PHP',
+      is_active: true,
+    });
+
+    component.submit();
+
+    expect(emitSpy).toHaveBeenCalledWith({
+      slug: 'initial-consult',
+      name: 'Initial Consultation',
+      description: 'Intro session',
+      duration_minutes: 60,
+      price_amount: '2500.00',
+      currency: 'PHP',
+      is_active: true,
+    });
+  });
+
   it('patches form when edit values are provided', () => {
     fixture.componentRef.setInput('service', {
       id: 'svc-1',
