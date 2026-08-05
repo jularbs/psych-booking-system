@@ -4,7 +4,6 @@ import {
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
-  provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
@@ -18,7 +17,6 @@ import { authRefreshInterceptor } from './core/interceptors/auth-refresh.interce
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
     provideHttpClient(withInterceptors([authInterceptor, authRefreshInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
