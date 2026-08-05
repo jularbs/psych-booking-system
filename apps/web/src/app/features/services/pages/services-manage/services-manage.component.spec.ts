@@ -42,9 +42,14 @@ describe('ServicesManageComponent', () => {
   beforeEach(async () => {
     vi.resetAllMocks();
 
+    TestBed.overrideComponent(ServicesManageComponent, {
+      set: {
+        providers: [{ provide: ServicesManagePageStore, useValue: store }],
+      },
+    });
+
     await TestBed.configureTestingModule({
       imports: [ServicesManageComponent, ServiceFormComponent],
-      providers: [{ provide: ServicesManagePageStore, useValue: store }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ServicesManageComponent);

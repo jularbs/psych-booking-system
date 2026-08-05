@@ -13,6 +13,7 @@ import { ServicesFilter, ServicesManagePageStore } from './services-manage-page.
   standalone: true,
   imports: [CommonModule, ServiceFormComponent],
   templateUrl: './services-manage.component.html',
+  providers: [ServicesManagePageStore],
 })
 export class ServicesManageComponent implements OnInit {
   private readonly store = inject(ServicesManagePageStore);
