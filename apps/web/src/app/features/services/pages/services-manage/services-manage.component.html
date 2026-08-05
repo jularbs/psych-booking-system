@@ -11,7 +11,7 @@
     <p>{{ errorMessage() }}</p>
   }
 
-  @if (!isLoading) {
+  @if (!isLoading()) {
     <section>
       <h2>{{ isEditing() ? 'Edit Service' : 'Create Service' }}</h2>
 
@@ -27,9 +27,9 @@
     <section>
       <h2>Services List</h2>
       <div>
-        <button type="button" (click)="changeFilter(all)">All</button>
-        <button type="button" (click)="changeFilter(active)">Active</button>
-        <button type="button" (click)="changeFilter(inactive)">Inactive</button>
+        <button type="button" (click)="changeFilter('all')">All</button>
+        <button type="button" (click)="changeFilter('active')">Active</button>
+        <button type="button" (click)="changeFilter('inactive')">Inactive</button>
       </div>
       <ul>
         @for (service of services(); track service.id) {
@@ -39,7 +39,7 @@
             <span> — {{ service.price_amount }} {{ service.currency }}</span>
             <span> — {{ service.is_active ? 'Active' : 'Inactive' }}</span>
             <div>
-              <button type="button" (click)="editService(service)">Edit</button>
+              <button type="button" (click)="edit(service)">Edit</button>
               @if (service.is_active) {
                 <button type="button" (click)="deactivate(service.id)">Deactivate</button>
               } @else {
