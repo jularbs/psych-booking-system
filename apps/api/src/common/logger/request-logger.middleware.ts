@@ -11,6 +11,10 @@ export class RequestLoggerMiddleware implements NestMiddleware {
   constructor(private readonly logger: LoggerService) {}
 
   use(req: RequestWithId, res: Response, next: NextFunction): void {
+    if (process.env.NODE_ENV === 'test') {
+      return next();
+    }
+
     const startedAt = Date.now();
     const incomingId = req.header('x-request-id');
     const requestId = incomingId && incomingId.trim().length > 0 ? incomingId : randomUUID();

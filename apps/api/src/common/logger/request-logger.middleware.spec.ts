@@ -5,7 +5,12 @@ describe('RequestLoggerMiddleware', () => {
     expect(new RequestLoggerMiddleware({ log: vi.fn() } as never)).toBeDefined();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('sets x-request-id on response and logs lifecycle', () => {
+    vi.stubEnv('NODE_ENV', 'TEST_REQUEST_MIDDLEWARE');
     const logger = { log: vi.fn(), error: vi.fn(), warn: vi.fn() };
     const middleware = new RequestLoggerMiddleware(logger as never);
 
