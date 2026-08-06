@@ -9,6 +9,7 @@ import { RequestLoggerMiddleware } from '../common/logger/request-logger.middlew
 import { LoggerModule } from '../common/logger/logger.module';
 import { UsersModule } from '../modules/users/users.module';
 import { ServicesModule } from '../modules/services/services.module';
+import { GoogleCalendarModule } from '../modules/google-calendar/google-calendat.module';
 @Module({
   imports: [
     ConfigurationModule,
@@ -18,6 +19,7 @@ import { ServicesModule } from '../modules/services/services.module';
     AuthModule,
     UsersModule,
     ServicesModule,
+    GoogleCalendarModule,
   ],
   controllers: [AppController],
   providers: [AppService],
