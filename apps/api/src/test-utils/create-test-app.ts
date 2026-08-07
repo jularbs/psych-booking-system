@@ -83,15 +83,29 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 
 function runMigrations(connectionString: string): void {
   const workspaceRoot = getWorkspaceRoot(process.cwd());
-  const result = spawnSync('dbmate', ['--url', connectionString, 'up'], {
+  const localDbmate = resolve(workspaceRoot, 'node_modules', '.bin', 'dbmate');
+  const hasLocalDbmate = existsSync(localDbmate);
+
+  const command = hasLocalDbmate ? localDbmate : 'pnpm';
+  const args = hasLocalDbmate
+    ? ['--url', connectionString, 'up']
+    : ['exec', 'dbmate', '--url', connectionString, 'up'];
+
+  const result = spawnSync(command, args, {
     cwd: workspaceRoot,
     env: process.env,
     encoding: 'utf8',
   });
 
+  if (result.error) {
+    throw new Error(
+      `Failed to launch migration command (${command} ${args.join(' ')}): ${result.error.message}`,
+    );
+  }
+
   if (result.status !== 0) {
     throw new Error(
-      `dbmate migration failed for ${connectionString}\n${result.stdout}\n${result.stderr}`,
+      `dbmate migration failed for ${connectionString}\nCommand: ${command} ${args.join(' ')}\n${result.stdout ?? ''}\n${result.stderr ?? ''}`,
     );
   }
 }
