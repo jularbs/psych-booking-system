@@ -17,8 +17,8 @@ export class AuthSessionService {
   async logout(): Promise<void> {
     try {
       await firstValueFrom(this.authApiService.logout());
-    } catch (error) {
-      console.error('Logout API call failed:', error);
+    } catch {
+      // Ignore errors during logout, as we want to clear the session regardless of the API response
     }
 
     this.authService.clearSession();
