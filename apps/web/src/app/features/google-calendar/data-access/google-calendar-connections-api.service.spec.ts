@@ -79,6 +79,52 @@ describe('GoogleCalendarConnectionsApiService', () => {
     );
   });
 
+  it('lists calendars for a connection', async () => {
+    apiClient.get.mockReturnValue(
+      of([
+        { id: 'calendar-1', summary: 'Work Calendar' },
+        { id: 'calendar-2', summary: 'Personal Calendar' },
+      ]),
+    );
+
+    const connectionId = 'conn-1';
+
+    const result = await firstValueFrom(service.listCalendars(connectionId));
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      `/google-calendar/connections/${connectionId}/calendars`,
+    );
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'calendar-1',
+          summary: 'Work Calendar',
+        }),
+        expect.objectContaining({
+          id: 'calendar-2',
+          summary: 'Personal Calendar',
+        }),
+      ]),
+    );
+  });
+
+  it('requests authorization url', async () => {
+    const payload = { return_to: '/google-calendar/connection' };
+
+    apiClient.post.mockReturnValue(
+      of({ authorization_url: 'https://accounts.google.com/o/oauth2/v2/auth?state=xyz' }),
+    );
+
+    const result = await firstValueFrom(service.authorize(payload));
+
+    expect(apiClient.post).toHaveBeenCalledWith('/google-calendar/oauth/authorize', payload);
+    expect(result).toEqual(
+      expect.objectContaining({
+        authorization_url: 'https://accounts.google.com/o/oauth2/v2/auth?state=xyz',
+      }),
+    );
+  });
+
   it('revokes a connection', async () => {
     apiClient.post.mockReturnValue(of({ id: 'conn-1', status: 'revoked' }));
 

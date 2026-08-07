@@ -1,9 +1,9 @@
 import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+
 import { ApiClientService } from '../../../core/api/api-client.service';
 
-export const GOOGLE_CALENDAR_CONNECTION_STATUS = ['pending', 'active', 'revoked', 'error'] as const;
-
-export type GoogleCalendarConnectionStatus = (typeof GOOGLE_CALENDAR_CONNECTION_STATUS)[number];
+export type GoogleCalendarConnectionStatus = 'pending' | 'active' | 'revoked' | 'error';
 
 export interface GoogleCalendarConnectionRecord {
   id: string;
@@ -26,6 +26,11 @@ export interface GoogleCalendarConnectionRecord {
   updated_at: string;
 }
 
+export interface GoogleCalendarListItem {
+  id: string;
+  summary: string;
+}
+
 export interface CreateGoogleCalendarConnectionPayload {
   google_email: string;
   provider_subject: string;
@@ -36,31 +41,65 @@ export interface UpdateGoogleCalendarSelectionPayload {
   calendar_summary: string;
 }
 
+export interface GoogleOAuthAuthorizePayload {
+  return_to?: string;
+}
+
+export interface GoogleOAuthAuthorizeResponse {
+  authorization_url: string;
+}
+
+export interface GoogleOAuthCallbackResult {
+  success: boolean;
+  return_to: string;
+  connection_id: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class GoogleCalendarConnectionsApiService {
   private readonly apiClient = inject(ApiClientService);
 
-  getMine() {
-    return this.apiClient.get<GoogleCalendarConnectionRecord>('/google-calendar/connections/me');
+  getMine(): Observable<GoogleCalendarConnectionRecord | null> {
+    return this.apiClient.get<GoogleCalendarConnectionRecord | null>(
+      '/google-calendar/connections/me',
+    );
   }
 
-  create(payload: CreateGoogleCalendarConnectionPayload) {
+  create(
+    payload: CreateGoogleCalendarConnectionPayload,
+  ): Observable<GoogleCalendarConnectionRecord> {
     return this.apiClient.post<GoogleCalendarConnectionRecord>(
       '/google-calendar/connections',
       payload,
     );
   }
 
-  updateCalendarSelection(id: string, payload: UpdateGoogleCalendarSelectionPayload) {
+  updateCalendarSelection(
+    id: string,
+    payload: UpdateGoogleCalendarSelectionPayload,
+  ): Observable<GoogleCalendarConnectionRecord> {
     return this.apiClient.patch<GoogleCalendarConnectionRecord>(
       `/google-calendar/connections/${id}/calendar-selection`,
       payload,
     );
   }
 
-  revoke(id: string) {
+  listCalendars(id: string): Observable<GoogleCalendarListItem[]> {
+    return this.apiClient.get<GoogleCalendarListItem[]>(
+      `/google-calendar/connections/${id}/calendars`,
+    );
+  }
+
+  authorize(payload: GoogleOAuthAuthorizePayload): Observable<GoogleOAuthAuthorizeResponse> {
+    return this.apiClient.post<GoogleOAuthAuthorizeResponse>(
+      '/google-calendar/oauth/authorize',
+      payload,
+    );
+  }
+
+  revoke(id: string): Observable<GoogleCalendarConnectionRecord> {
     return this.apiClient.post<GoogleCalendarConnectionRecord>(
       `/google-calendar/connections/${id}/revoke`,
       {},
