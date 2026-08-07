@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
-import { USER_ROLES, UserRole } from '../../../database/database.types';
+import { USER_ROLES, type UserRole } from '../../../database/database.types';
 
 export class RegisterDto {
   @IsEmail()
