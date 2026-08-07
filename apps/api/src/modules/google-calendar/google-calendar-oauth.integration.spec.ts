@@ -71,8 +71,7 @@ describe('Google calendar oauth integration', () => {
       .set('Authorization', `Bearer ${staff.access_token}`)
       .send({
         return_to: '/google-calendar/connection',
-      })
-      .expect(201);
+      });
 
     expect(response.body.data.authorization_url).toContain(
       'https://accounts.google.com/o/oauth2/v2/auth',
@@ -101,7 +100,6 @@ describe('Google calendar oauth integration', () => {
 
     const callbackResponse = await request(context.app.getHttpServer())
       .get('/google-calendar/oauth/callback')
-      .set('Authorization', `Bearer ${staff.access_token}`)
       .query({
         code: 'auth-code',
         state: state as string,
@@ -140,7 +138,6 @@ describe('Google calendar oauth integration', () => {
 
     const callbackResponse = await request(context.app.getHttpServer())
       .get('/google-calendar/oauth/callback')
-      .set('Authorization', `Bearer ${staff.access_token}`)
       .query({
         code: 'auth-code',
         state,

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadGatewayException, Inject, Injectable } from '@nestjs/common';
 
 export const GOOGLE_CALENDAR_CLIENT_FACTORY = 'GOOGLE_CALENDAR_CLIENT_FACTORY';
 
@@ -28,8 +28,14 @@ export class GoogleCalendarProviderService {
     private readonly clientFactory: GoogleCalendarClientFactory,
   ) {}
 
-  getProfile(accessToken: string): Promise<GoogleOAuthUserProfile> {
-    return this.clientFactory.createOAuthUserInfoClient().getProfile(accessToken);
+  async getProfile(accessToken: string): Promise<GoogleOAuthUserProfile> {
+    const profile = await this.clientFactory.createOAuthUserInfoClient().getProfile(accessToken);
+
+    if (!profile.email || !profile.sub) {
+      throw new BadGatewayException('Incomplete Google Profile response');
+    }
+
+    return profile;
   }
 
   listCalendars(accessToken: string): Promise<GoogleCalendarListItem[]> {

@@ -19,9 +19,6 @@ import { GoogleCalendarConnectionsService } from './google-calendar-connections.
 import { GoogleCalendarProviderService } from './google-calendar-provider.service';
 import { GoogleOAuthService } from './google-oauth.service';
 import { GoogleOAuthStateService } from './google-oauth-state.service';
-
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
 @Controller('google-calendar')
 export class GoogleCalendarOAuthController {
   constructor(
@@ -31,6 +28,8 @@ export class GoogleCalendarOAuthController {
     private readonly stateService: GoogleOAuthStateService,
   ) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
   @Post('oauth/authorize')
   async authorize(
     @CurrentUser('sub') user_id: string | undefined,
@@ -82,6 +81,8 @@ export class GoogleCalendarOAuthController {
     };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
   @Get('connections/:id/calendars')
   listCalendars(@Param('id') id: string) {
     return this.connectionsService.listAvailableCalendars(id);

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 
 export interface GoogleOAuthClientLike {
   generateAuthUrl(options: Record<string, unknown>): string;
@@ -36,6 +36,7 @@ export class GoogleOAuthService {
   ) {}
 
   buildAuthorizationUrl(state: string): string {
+    this.assertConfigured();
     const client = this.oauthClientFactory.create();
 
     return client.generateAuthUrl({
@@ -54,6 +55,7 @@ export class GoogleOAuthService {
     scope?: string | null;
     id_token?: string | null;
   }> {
+    this.assertConfigured();
     const client = this.oauthClientFactory.create();
     const response = await client.getToken(code);
 
@@ -64,5 +66,16 @@ export class GoogleOAuthService {
       scope: response.tokens.scope ?? null,
       id_token: response.tokens.id_token ?? null,
     };
+  }
+
+  private assertConfigured(): void {
+    if (
+      !this.config.clientId ||
+      !this.config.clientSecret ||
+      !this.config.redirectUri ||
+      this.config.scopes.length === 0
+    ) {
+      throw new InternalServerErrorException('Google OAuth is not configured properly');
+    }
   }
 }
