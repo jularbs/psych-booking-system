@@ -1,0 +1,35 @@
+<section>
+  <header>
+    <h1>Google Calendar Connection</h1>
+    <p>
+      Manage the Google Calendar account that will serve as the source of truth for occupied
+      schedule and real-time availability checks.
+    </p>
+  </header>
+
+  @if (isLoading()) {
+    <p>Loading connection...</p>
+  }
+  @if (errorMessage()) {
+    <p>{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    @if (connection()) {
+      <div>
+        <p><strong>Google Email:</strong> {{ connection()?.google_email }}</p>
+        <p><strong>Status:</strong> {{ connection()?.status }}</p>
+        <p>
+          <strong>Selected Calendar:</strong>
+          {{ connection()?.calendar_summary || 'None selected' }}
+        </p>
+
+        <button type="button" [disabled]="isSubmitting()" (click)="revoke()">
+          Revoke Connection
+        </button>
+      </div>
+    } @else {
+      <p>No Google Calendar connection configured yet.</p>
+    }
+  }
+</section>
