@@ -33,6 +33,17 @@ export class GoogleCalendarConnectionsService {
 
     return this.repository.create({
       ...params,
+      access_token: null,
+      refresh_token: null,
+      token_expiry: null,
+      scope: null,
+      calendar_id: null,
+      calendar_summary: null,
+      sync_token: null,
+      watch_channel_id: null,
+      watch_resource_id: null,
+      watch_expiration: null,
+      last_synced_at: null,
       status: params.status ?? 'pending',
     });
   }

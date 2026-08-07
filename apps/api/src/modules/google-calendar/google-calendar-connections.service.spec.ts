@@ -60,12 +60,14 @@ describe('GoogleCalendarConnectionsService', () => {
       provider_subject: 'google-sub-123',
     });
 
-    expect(repository.create).toHaveBeenCalledWith({
-      user_id,
-      google_email: 'user@example.com',
-      provider_subject: 'google-sub-123',
-      status: 'pending',
-    });
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id,
+        google_email: 'user@example.com',
+        provider_subject: 'google-sub-123',
+        status: 'pending',
+      }),
+    );
     expect(result).toEqual(expect.objectContaining(newConnection));
     expect(result.status).toBe('pending');
   });
