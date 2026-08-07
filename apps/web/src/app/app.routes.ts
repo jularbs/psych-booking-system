@@ -37,6 +37,17 @@ export const appRoutes: Routes = [
           ),
       },
       {
+        path: 'google-calendar/connection',
+        canMatch: [roleGuard],
+        data: {
+          roles: ['PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT'],
+        },
+        loadComponent: () =>
+          import(
+            './features/google-calendar/pages/google-calendar-connection/google-calendar-connection.component'
+          ).then((m) => m.GoogleCalendarConnectionComponent),
+      },
+      {
         path: 'services/manage',
         canMatch: [roleGuard],
         data: {

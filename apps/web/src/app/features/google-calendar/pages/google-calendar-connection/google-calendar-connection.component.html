@@ -9,27 +9,59 @@
 
   @if (isLoading()) {
     <p>Loading connection...</p>
-  }
-  @if (errorMessage()) {
+  } @else if (errorMessage()) {
     <p>{{ errorMessage() }}</p>
-  }
+  } @else {
+    @if (hasConnection()) {
+      <p><strong>Google Email:</strong> {{ connection()!.google_email }}</p>
+      <p><strong>Status:</strong> {{ connection()!.status }}</p>
+      <p>
+        <strong>Selected Calendar:</strong>
+        {{ connection()!.calendar_summary || 'None selected' }}
+      </p>
 
-  @if (!isLoading() && !errorMessage()) {
-    @if (connection()) {
       <div>
-        <p><strong>Google Email:</strong> {{ connection()?.google_email }}</p>
-        <p><strong>Status:</strong> {{ connection()?.status }}</p>
-        <p>
-          <strong>Selected Calendar:</strong>
-          {{ connection()?.calendar_summary || 'None selected' }}
-        </p>
+        <button type="button" [disabled]="isSubmitting()" (click)="connectOrRefreshAuth()">
+          Refresh Google Authorization
+        </button>
 
         <button type="button" [disabled]="isSubmitting()" (click)="revoke()">
           Revoke Connection
         </button>
       </div>
+
+      @if (hasCalendars()) {
+        <section>
+          <h2>Available Calendars</h2>
+
+          <ul>
+            @for (calendar of availableCalendars(); track calendar.id) {
+              <li>
+                <strong>{{ calendar.summary }}</strong>
+                @if (connection()!.calendar_id === calendar.id) {
+                  <span> — Selected</span>
+                } @else {
+                  <button
+                    type="button"
+                    [disabled]="isSubmitting()"
+                    (click)="selectCalendar(calendar)"
+                  >
+                    Select
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      } @else {
+        <p>No Google calendars available yet.</p>
+      }
     } @else {
       <p>No Google Calendar connection configured yet.</p>
+
+      <button type="button" [disabled]="isSubmitting()" (click)="connectOrRefreshAuth()">
+        Connect Google Calendar
+      </button>
     }
   }
 </section>
