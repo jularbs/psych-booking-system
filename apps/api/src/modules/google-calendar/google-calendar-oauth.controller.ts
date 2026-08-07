@@ -7,7 +7,10 @@ import {
   Query,
   UnauthorizedException,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
+import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -26,6 +29,7 @@ export class GoogleCalendarOAuthController {
     private readonly providerService: GoogleCalendarProviderService,
     private readonly connectionsService: GoogleCalendarConnectionsService,
     private readonly stateService: GoogleOAuthStateService,
+    private readonly redirectService: GoogleOAuthRedirectService,
   ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -50,35 +54,64 @@ export class GoogleCalendarOAuthController {
   }
 
   @Get('oauth/callback')
-  async callback(@Query() query: GoogleOAuthCallbackQueryDto) {
+  async callback(@Query() query: GoogleOAuthCallbackQueryDto, @Res() res: Response) {
+    const appBaseUrl = this.oauthService.getAppBaseUrl();
+
     if (query.error) {
-      throw new UnauthorizedException(`Google OAuth failed: ${query.error}`);
+      const fallbackReturnTo = '/google-calendar/connection';
+      const redirectUrl = this.redirectService.buildErrorRedirectUrl(
+        appBaseUrl,
+        fallbackReturnTo,
+        query.error,
+      );
+
+      res.redirect(302, redirectUrl);
+      return;
     }
 
-    const state = this.stateService.parseState(query.state);
-    const tokens = await this.oauthService.exchangeCodeForTokens(query.code);
+    try {
+      const state = this.stateService.parseState(query.state);
+      const tokens = await this.oauthService.exchangeCodeForTokens(query.code);
 
-    if (!tokens.access_token) {
-      throw new UnauthorizedException('Google OAuth did not return an access token');
+      if (!tokens.access_token) {
+        const redirectUrl = this.redirectService.buildErrorRedirectUrl(
+          appBaseUrl,
+          state.return_to ?? '/google-calendar/connection',
+          'missing_access_token',
+        );
+
+        res.redirect(302, redirectUrl);
+        return;
+      }
+
+      const profile = await this.providerService.getProfile(tokens.access_token);
+
+      const connection = await this.connectionsService.upsertOAuthConnectionForUser({
+        user_id: state.user_id,
+        google_email: profile.email,
+        provider_subject: profile.sub,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token ?? null,
+        token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+        scope: tokens.scope ?? null,
+      });
+
+      const redirectUrl = this.redirectService.buildSuccessRedirectUrl(
+        appBaseUrl,
+        state.return_to ?? '/google-calendar/connection',
+        connection.id,
+      );
+
+      res.redirect(302, redirectUrl);
+    } catch {
+      const redirectUrl = this.redirectService.buildErrorRedirectUrl(
+        appBaseUrl,
+        '/google-calendar/connection',
+        'oauth_callback_failed',
+      );
+
+      res.redirect(302, redirectUrl);
     }
-
-    const profile = await this.providerService.getProfile(tokens.access_token);
-
-    const connection = await this.connectionsService.upsertOAuthConnectionForUser({
-      user_id: state.user_id,
-      google_email: profile.email,
-      provider_subject: profile.sub,
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token ?? null,
-      token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
-      scope: tokens.scope ?? null,
-    });
-
-    return {
-      success: true,
-      return_to: state.return_to,
-      connection_id: connection.id,
-    };
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -17,6 +17,7 @@ export class GoogleCalendarConnectionComponent implements OnInit {
   readonly isLoading = this.store.isLoading;
   readonly isSubmitting = this.store.isSubmitting;
   readonly errorMessage = this.store.errorMessage;
+  readonly successMessage = this.store.successMessage;
 
   readonly hasConnection = computed(() => !!this.connection());
   readonly hasCalendars = computed(() => this.availableCalendars().length > 0);

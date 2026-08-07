@@ -78,7 +78,7 @@ describe('Google calendar oauth integration', () => {
     );
   });
 
-  it('handles oauth callback and persists connection', async () => {
+  it('redirects after oauth callback and persists connection', async () => {
     const staff = await createAuthenticatedUser(context.app, {
       email: 'staff@example.com',
       password: 'Password123',
@@ -104,10 +104,11 @@ describe('Google calendar oauth integration', () => {
         code: 'auth-code',
         state: state as string,
       })
-      .expect(200);
+      .expect(302);
 
-    expect(callbackResponse.body.data.success).toBe(true);
-    expect(callbackResponse.body.data.connection_id).toBeTypeOf('string');
+    expect(callbackResponse.headers.location).toContain(
+      '/google-calendar/connection?oauth=success',
+    );
 
     const connectionResponse = await request(context.app.getHttpServer())
       .get('/google-calendar/connections/me')
@@ -136,15 +137,20 @@ describe('Google calendar oauth integration', () => {
     const authorization_url = authorize.body.data.authorization_url as string;
     const state = new URL(authorization_url).searchParams.get('state');
 
-    const callbackResponse = await request(context.app.getHttpServer())
+    await request(context.app.getHttpServer())
       .get('/google-calendar/oauth/callback')
       .query({
         code: 'auth-code',
         state,
       })
+      .expect(302);
+
+    const connectionResponse = await request(context.app.getHttpServer())
+      .get('/google-calendar/connections/me')
+      .set('Authorization', `Bearer ${staff.access_token}`)
       .expect(200);
 
-    const connection_id = callbackResponse.body.data.connection_id as string;
+    const connection_id = connectionResponse.body.data.id;
 
     const response = await request(context.app.getHttpServer())
       .get(`/google-calendar/connections/${connection_id}/calendars`)
@@ -155,14 +161,16 @@ describe('Google calendar oauth integration', () => {
     expect(response.body.data[0].id).toBe('primary');
   });
 
-  it('rejects invalid oauth callback state', async () => {
-    await request(context.app.getHttpServer())
+  it('redirects to error page for invalid oauth callback state', async () => {
+    const response = await request(context.app.getHttpServer())
       .get('/google-calendar/oauth/callback')
       .query({
         code: 'auth-code',
         state: 'bad-state',
       })
-      .expect(401);
+      .expect(302);
+
+    expect(response.headers.location).toContain('/google-calendar/connection?oauth=error');
   });
 
   it('forbids patient access to oauth authorize', async () => {

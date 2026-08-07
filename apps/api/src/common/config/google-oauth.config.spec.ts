@@ -7,6 +7,7 @@ describe('getGoogleOAuthConfig', () => {
       GOOGLE_OAUTH_REDIRECT_URI: 'http://localhost:3000/callback',
       GOOGLE_OAUTH_SCOPES:
         'openid,email,profile,https://www.googleapis.com/auth/calendar.calendarlist.readonly,https://www.googleapis.com/auth/calendar.freebusy',
+      APP_BASE_URL: 'http://localhost:4200',
     });
 
     expect(result).toEqual({
@@ -20,6 +21,7 @@ describe('getGoogleOAuthConfig', () => {
         'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
         'https://www.googleapis.com/auth/calendar.freebusy',
       ],
+      appBaseUrl: 'http://localhost:4200',
     });
   });
 });

@@ -18,6 +18,7 @@ describe('GoogleCalendarConnectionComponent', () => {
     isLoading: vi.fn(() => false),
     isSubmitting: vi.fn(() => false),
     errorMessage: vi.fn(() => null),
+    successMessage: vi.fn(() => null),
   };
 
   beforeEach(async () => {
@@ -72,5 +73,6 @@ describe('GoogleCalendarConnectionComponent', () => {
     expect(component.isLoading()).toBe(false);
     expect(component.isSubmitting()).toBe(false);
     expect(component.errorMessage()).toBeNull();
+    expect(component.successMessage()).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ describe('GoogleOauthService', () => {
       'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
       'https://www.googleapis.com/auth/calendar.freebusy',
     ],
+    appBaseUrl: 'http://localhost:4200',
   };
 
   const oauthClientFactory = {

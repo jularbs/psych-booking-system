@@ -19,6 +19,7 @@ import {
   GoogleCalendarProviderService,
 } from './google-calendar-provider.service';
 import { getGoogleOAuthConfig } from '../../common/config/google-oauth.config';
+import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
 
 @Module({
   controllers: [GoogleCalendarConnectionsController, GoogleCalendarOAuthController],
@@ -28,6 +29,7 @@ import { getGoogleOAuthConfig } from '../../common/config/google-oauth.config';
     GoogleOAuthService,
     GoogleCalendarProviderService,
     GoogleOAuthStateService,
+    GoogleOAuthRedirectService,
     {
       provide: GOOGLE_OAUTH_RUNTIME_CONFIG,
       useFactory: () => getGoogleOAuthConfig(process.env),

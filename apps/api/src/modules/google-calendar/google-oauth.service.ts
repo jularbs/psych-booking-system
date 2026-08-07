@@ -22,6 +22,7 @@ export interface GoogleOAuthRuntimeConfig {
   clientSecret: string;
   redirectUri: string;
   scopes: string[];
+  appBaseUrl: string;
 }
 
 export const GOOGLE_OAUTH_RUNTIME_CONFIG = 'GOOGLE_OAUTH_RUNTIME_CONFIG';
@@ -68,11 +69,17 @@ export class GoogleOAuthService {
     };
   }
 
+  getAppBaseUrl(): string {
+    this.assertConfigured();
+    return this.config.appBaseUrl;
+  }
+
   private assertConfigured(): void {
     if (
       !this.config.clientId ||
       !this.config.clientSecret ||
       !this.config.redirectUri ||
+      !this.config.appBaseUrl ||
       this.config.scopes.length === 0
     ) {
       throw new InternalServerErrorException('Google OAuth is not configured properly');
