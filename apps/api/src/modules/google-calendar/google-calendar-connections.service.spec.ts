@@ -1,5 +1,8 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { GoogleCalendarConnectionsRepository } from './google-calendar-connections.repository';
 import { GoogleCalendarConnectionsService } from './google-calendar-connections.service';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { GoogleCalendarProviderService } from './google-calendar-provider.service';
 
 describe('GoogleCalendarConnectionsService', () => {
   let service: GoogleCalendarConnectionsService;
@@ -11,10 +14,21 @@ describe('GoogleCalendarConnectionsService', () => {
     update: vi.fn(),
   };
 
-  beforeEach(async () => {
-    vi.clearAllMocks();
+  const providersService = {
+    listCalendars: vi.fn(),
+  };
 
-    service = new GoogleCalendarConnectionsService(repository as never);
+  beforeEach(async () => {
+    vi.resetAllMocks();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        GoogleCalendarConnectionsService,
+        { provide: GoogleCalendarConnectionsRepository, useValue: repository },
+        { provide: GoogleCalendarProviderService, useValue: providersService },
+      ],
+    }).compile();
+    service = module.get<GoogleCalendarConnectionsService>(GoogleCalendarConnectionsService);
   });
 
   it('should be defined', () => {
@@ -168,6 +182,140 @@ describe('GoogleCalendarConnectionsService', () => {
       expect.objectContaining({
         status: 'revoked',
       }),
+    );
+  });
+
+  it('creates a connection from oauth callback when none exists', async () => {
+    repository.findByUserId.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 'new-connection-id',
+      user_id: 'user-id',
+      google_email: 'user@example.com',
+      provider_subject: 'google-sub-123',
+      status: 'active',
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      token_expiry: '2026-08-07T10:00:00.000Z',
+      scope: 'openid email profile',
+      calendar_id: null,
+      calendar_summary: null,
+      sync_token: null,
+      watch_channel_id: null,
+      watch_resource_id: null,
+      watch_expiration: null,
+      last_synced_at: null,
+      created_at: '2026-08-07T09:00:00.000Z',
+      updated_at: '2026-08-07T09:00:00.000Z',
+    });
+
+    repository.create.mockResolvedValue(undefined);
+
+    const result = await service.upsertOAuthConnectionForUser({
+      user_id: 'user-id',
+      google_email: 'user@example.com',
+      provider_subject: 'google-sub-123',
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      token_expiry: '2026-08-07T10:00:00.000Z',
+      scope: 'openid email profile',
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 'user-id',
+        google_email: 'user@example.com',
+        provider_subject: 'google-sub-123',
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+        token_expiry: '2026-08-07T10:00:00.000Z',
+        scope: 'openid email profile',
+      }),
+    );
+
+    expect(result.status).toBe('active');
+  });
+
+  it('updates an existing connection from oauth callback', async () => {
+    repository.findByUserId.mockResolvedValueOnce({
+      id: 'conn-1',
+      user_id: 'user-1',
+      refresh_token: 'old-refresh-token',
+    });
+
+    repository.findById.mockResolvedValueOnce({
+      id: 'conn-1',
+      user_id: 'user-1',
+      google_email: 'staff@gmail.com',
+      provider_subject: 'google-sub-123',
+      access_token: 'new-access-token',
+      refresh_token: 'old-refresh-token',
+      token_expiry: '2026-08-07T11:00:00.000Z',
+      scope: 'openid email profile',
+      calendar_id: null,
+      calendar_summary: null,
+      sync_token: null,
+      watch_channel_id: null,
+      watch_resource_id: null,
+      watch_expiration: null,
+      status: 'active',
+      last_synced_at: null,
+      created_at: '2026-08-07T09:00:00.000Z',
+      updated_at: '2026-08-07T09:30:00.000Z',
+    });
+
+    repository.update.mockResolvedValue(undefined);
+
+    const result = await service.upsertOAuthConnectionForUser({
+      user_id: 'user-1',
+      google_email: 'staff@gmail.com',
+      provider_subject: 'google-sub-123',
+      access_token: 'new-access-token',
+      refresh_token: null,
+      token_expiry: '2026-08-07T11:00:00.000Z',
+      scope: 'openid email profile',
+    });
+
+    expect(repository.update).toHaveBeenCalledWith('conn-1', {
+      google_email: 'staff@gmail.com',
+      provider_subject: 'google-sub-123',
+      access_token: 'new-access-token',
+      refresh_token: 'old-refresh-token',
+      token_expiry: '2026-08-07T11:00:00.000Z',
+      scope: 'openid email profile',
+      status: 'active',
+    });
+
+    expect(result.access_token).toBe('new-access-token');
+    expect(result.refresh_token).toBe('old-refresh-token');
+  });
+
+  it('lists available calendars for a connection', async () => {
+    repository.findById.mockResolvedValue({
+      id: 'connection-id',
+      access_token: 'access-token',
+    });
+
+    providersService.listCalendars.mockResolvedValue([
+      { id: 'calendar-1', summary: 'Work Calendar' },
+      { id: 'calendar-2', summary: 'Personal Calendar' },
+    ]);
+
+    const result = await service.listAvailableCalendars('connection-id');
+
+    expect(providersService.listCalendars).toHaveBeenCalledWith('access-token');
+    expect(result).toEqual([
+      { id: 'calendar-1', summary: 'Work Calendar' },
+      { id: 'calendar-2', summary: 'Personal Calendar' },
+    ]);
+  });
+
+  it('throws error when listing calendars without access token', async () => {
+    repository.findById.mockResolvedValue({
+      id: 'connection-id',
+      access_token: null,
+    });
+
+    await expect(service.listAvailableCalendars('connection-id')).rejects.toBeInstanceOf(
+      ConflictException,
     );
   });
 });
