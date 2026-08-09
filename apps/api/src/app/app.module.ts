@@ -10,6 +10,7 @@ import { LoggerModule } from '../common/logger/logger.module';
 import { UsersModule } from '../modules/users/users.module';
 import { ServicesModule } from '../modules/services/services.module';
 import { GoogleCalendarModule } from '../modules/google-calendar/google-calendar.module';
+import { AvailabilityRulesModule } from '../modules/availability-rules/availability-rules.module';
 @Module({
   imports: [
     ConfigurationModule,
@@ -20,6 +21,7 @@ import { GoogleCalendarModule } from '../modules/google-calendar/google-calendar
     UsersModule,
     ServicesModule,
     GoogleCalendarModule,
+    AvailabilityRulesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
