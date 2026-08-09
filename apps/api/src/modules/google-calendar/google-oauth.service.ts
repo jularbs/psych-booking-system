@@ -40,10 +40,17 @@ export class GoogleOAuthService {
     this.assertConfigured();
     const client = this.oauthClientFactory.create();
 
+    const scope = this.config.scopes.join(' ');
+
+    if (!scope) {
+      throw new InternalServerErrorException('Google OAuth scopes are not configured properly');
+    }
+
     return client.generateAuthUrl({
       access_type: 'offline',
       include_granted_scopes: true,
       response_type: 'code',
+      scope,
       state,
       prompt: 'consent',
     });

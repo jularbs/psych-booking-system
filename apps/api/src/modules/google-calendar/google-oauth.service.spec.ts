@@ -30,7 +30,7 @@ describe('GoogleOauthService', () => {
     expect(service).toBeDefined();
   });
 
-  it('builds authorization url correctly', () => {
+  it('builds authorization url with scope string', () => {
     const generateAuthUrl = vi
       .fn()
       .mockReturnValue('https://accounts.google.com/o/oauth2/v2/auth?x=1');
@@ -40,7 +40,15 @@ describe('GoogleOauthService', () => {
     });
 
     const url = service.buildAuthorizationUrl('state-123');
-    expect(generateAuthUrl).toHaveBeenCalled();
+    expect(generateAuthUrl).toHaveBeenCalledWith({
+      access_type: 'offline',
+      include_granted_scopes: true,
+      response_type: 'code',
+      scope:
+        'openid email profile https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.freebusy',
+      state: 'state-123',
+      prompt: 'consent',
+    });
     expect(url).toContain('https://accounts.google.com/o/oauth2');
   });
 
