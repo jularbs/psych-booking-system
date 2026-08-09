@@ -25,9 +25,15 @@ import {
   CalendarProviderEventInput,
 } from './google-calendar-provider.types';
 import { GoogleCalendarAdapterService } from './google-calendar-adapter.service';
+import { GoogleCalendarAvailabilityService } from './google-calendar-availability.service';
+import { GoogleCalendarAvailabilityController } from './google-calendar-availability.controller';
 
 @Module({
-  controllers: [GoogleCalendarConnectionsController, GoogleCalendarOAuthController],
+  controllers: [
+    GoogleCalendarConnectionsController,
+    GoogleCalendarOAuthController,
+    GoogleCalendarAvailabilityController,
+  ],
   providers: [
     GoogleCalendarConnectionsRepository,
     GoogleCalendarConnectionsService,
@@ -267,11 +273,13 @@ import { GoogleCalendarAdapterService } from './google-calendar-adapter.service'
         }),
       }),
     },
+    GoogleCalendarAvailabilityService,
   ],
   exports: [
     GoogleCalendarConnectionsService,
     GoogleCalendarProviderService,
     GoogleCalendarAdapterService,
+    GoogleCalendarAvailabilityService,
   ],
 })
 export class GoogleCalendarModule {}
