@@ -14,6 +14,10 @@ export const GOOGLE_CALENDAR_CONNECTION_STATUS = ['pending', 'active', 'revoked'
 
 export type GoogleCalendarConnectionStatus = (typeof GOOGLE_CALENDAR_CONNECTION_STATUS)[number];
 
+export const AVAILABILITY_RULE_TYPES = ['weekly_window', 'blackout_window'] as const;
+
+export type AvailabilityRuleType = (typeof AVAILABILITY_RULE_TYPES)[number];
+
 export interface UsersTable {
   id: string;
   email: string;
@@ -58,8 +62,23 @@ export interface GoogleCalendarConnectionsTable {
   updated_at: ColumnType<string, never, string>;
 }
 
+export interface AvailabilityRulesTable {
+  id: GeneratedAlways<string>;
+  user_id: string;
+  rule_type: AvailabilityRuleType;
+  description: string | null;
+  day_of_week: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  date_start: string | null;
+  date_end: string | null;
+  is_active: boolean;
+  created_at: GeneratedAlways<string>;
+  updated_at: ColumnType<string, never, string>;
+}
 export interface Database {
   users: UsersTable;
   services: ServicesTable;
   google_calendar_connections: GoogleCalendarConnectionsTable;
+  availability_rules: AvailabilityRulesTable;
 }
