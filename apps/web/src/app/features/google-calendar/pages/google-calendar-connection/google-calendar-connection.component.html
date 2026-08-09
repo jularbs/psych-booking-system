@@ -9,9 +9,15 @@
 
   @if (isLoading()) {
     <p>Loading connection...</p>
-  } @else if (errorMessage()) {
-    <p>{{ errorMessage() }}</p>
   } @else {
+    @if (successMessage()) {
+      <p>{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p>{{ errorMessage() }}</p>
+    }
+
     @if (hasConnection()) {
       <p><strong>Google Email:</strong> {{ connection()!.google_email }}</p>
       <p><strong>Status:</strong> {{ connection()!.status }}</p>

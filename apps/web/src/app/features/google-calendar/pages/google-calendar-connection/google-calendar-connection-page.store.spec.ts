@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { GoogleCalendarConnectionsApiService } from '../../data-access/google-calendar-connections-api.service';
 import { GoogleCalendarConnectionPageStore } from './google-calendar-connection-page.store';
@@ -21,14 +22,26 @@ describe('GoogleCalendarConnectionPageStore', () => {
     assign: vi.fn(),
   };
 
+  const activatedRoute = {
+    snapshot: {
+      queryParams: {},
+    },
+  };
+
+  const router = {
+    navigate: vi.fn().mockResolvedValue(true),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-
+    activatedRoute.snapshot.queryParams = {};
     TestBed.configureTestingModule({
       providers: [
         GoogleCalendarConnectionPageStore,
         { provide: GoogleCalendarConnectionsApiService, useValue: api },
         { provide: DOCUMENT, useValue: { location } },
+        { provide: ActivatedRoute, useValue: activatedRoute },
+        { provide: Router, useValue: router },
       ],
     });
 
@@ -66,6 +79,34 @@ describe('GoogleCalendarConnectionPageStore', () => {
     expect(store.errorMessage()).toBeNull();
   });
 
+  it('sets success state from oauth success query param', async () => {
+    activatedRoute.snapshot.queryParams = {
+      oauth: 'success',
+      connectionId: 'conn-1',
+    };
+
+    api.getMine.mockReturnValue(of(null));
+
+    await store.load();
+
+    expect(store.successMessage()).toBe('Google Calendar connected successfully.');
+    expect(router.navigate).toHaveBeenCalled();
+  });
+
+  it('sets error state from oauth error query param', async () => {
+    activatedRoute.snapshot.queryParams = {
+      oauth: 'error',
+      reason: 'access_denied',
+    };
+
+    api.getMine.mockReturnValue(of(null));
+
+    await store.load();
+
+    expect(store.errorMessage()).toBe('Google Calendar authorization failed: access_denied');
+    expect(router.navigate).toHaveBeenCalled();
+  });
+
   it('sets error when load fails', async () => {
     api.getMine.mockReturnValue(throwError(() => new Error('load failed')));
 
@@ -74,6 +115,18 @@ describe('GoogleCalendarConnectionPageStore', () => {
     expect(store.connection()).toBeNull();
     expect(store.errorMessage()).toBe('Failed to load Google Calendar connection.');
     expect(store.isLoading()).toBe(false);
+  });
+
+  it('starts oauth authorization by redirecting browser', async () => {
+    api.authorize.mockReturnValue(
+      of({ authorization_url: 'https://accounts.google.com/o/oauth2/v2/auth?mock=1' }),
+    );
+
+    await store.connectOrRefreshAuth();
+
+    expect(location.assign).toHaveBeenCalledWith(
+      'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+    );
   });
 
   it('revokes the current connection', async () => {

@@ -3,6 +3,7 @@ export interface GoogleOAuthConfig {
   clientSecret: string;
   redirectUri: string;
   scopes: string[];
+  appBaseUrl: string;
 }
 
 export function getGoogleOAuthConfig(env: NodeJS.ProcessEnv): GoogleOAuthConfig {
@@ -13,6 +14,7 @@ export function getGoogleOAuthConfig(env: NodeJS.ProcessEnv): GoogleOAuthConfig 
     scopes: (env.GOOGLE_OAUTH_SCOPES ?? '')
       .split(',')
       .map((scope) => scope.trim())
-      .filter(Boolean),
+      .filter((value) => value.length > 0),
+    appBaseUrl: env.APP_BASE_URL ?? 'http://localhost:4200',
   };
 }
