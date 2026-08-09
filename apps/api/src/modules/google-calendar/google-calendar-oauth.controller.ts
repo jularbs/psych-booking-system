@@ -17,7 +17,6 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { GoogleOAuthAuthorizeDto } from './dto/google-oauth-authorize.dto';
-import { GoogleOAuthCallbackQueryDto } from './dto/google-oauth-callback-query.dto';
 import { GoogleCalendarConnectionsService } from './google-calendar-connections.service';
 import { GoogleCalendarProviderService } from './google-calendar-provider.service';
 import { GoogleOAuthService } from './google-oauth.service';
@@ -54,15 +53,33 @@ export class GoogleCalendarOAuthController {
   }
 
   @Get('oauth/callback')
-  async callback(@Query() query: GoogleOAuthCallbackQueryDto, @Res() res: Response) {
+  async callback(
+    @Query() query: Record<string, string | string[] | undefined>,
+    @Res() res: Response,
+  ) {
     const appBaseUrl = this.oauthService.getAppBaseUrl();
 
-    if (query.error) {
+    const code = this.getSingleQueryValue(query.code);
+    const state = this.getSingleQueryValue(query.state);
+    const error = this.getSingleQueryValue(query.error);
+
+    if (error) {
       const fallbackReturnTo = '/google-calendar/connection';
       const redirectUrl = this.redirectService.buildErrorRedirectUrl(
         appBaseUrl,
         fallbackReturnTo,
-        query.error,
+        error,
+      );
+
+      res.redirect(302, redirectUrl);
+      return;
+    }
+
+    if (!code || !state) {
+      const redirectUrl = this.redirectService.buildErrorRedirectUrl(
+        appBaseUrl,
+        '/google-calendar/connection',
+        'missing_code_or_state',
       );
 
       res.redirect(302, redirectUrl);
@@ -70,13 +87,13 @@ export class GoogleCalendarOAuthController {
     }
 
     try {
-      const state = this.stateService.parseState(query.state);
-      const tokens = await this.oauthService.exchangeCodeForTokens(query.code);
+      const parsedState = this.stateService.parseState(state);
+      const tokens = await this.oauthService.exchangeCodeForTokens(code);
 
       if (!tokens.access_token) {
         const redirectUrl = this.redirectService.buildErrorRedirectUrl(
           appBaseUrl,
-          state.return_to ?? '/google-calendar/connection',
+          parsedState.return_to ?? '/google-calendar/connection',
           'missing_access_token',
         );
 
@@ -87,7 +104,7 @@ export class GoogleCalendarOAuthController {
       const profile = await this.providerService.getProfile(tokens.access_token);
 
       const connection = await this.connectionsService.upsertOAuthConnectionForUser({
-        user_id: state.user_id,
+        user_id: parsedState.user_id,
         google_email: profile.email,
         provider_subject: profile.sub,
         access_token: tokens.access_token,
@@ -98,7 +115,7 @@ export class GoogleCalendarOAuthController {
 
       const redirectUrl = this.redirectService.buildSuccessRedirectUrl(
         appBaseUrl,
-        state.return_to ?? '/google-calendar/connection',
+        parsedState.return_to ?? '/google-calendar/connection',
         connection.id,
       );
 
@@ -119,5 +136,18 @@ export class GoogleCalendarOAuthController {
   @Get('connections/:id/calendars')
   listCalendars(@Param('id') id: string) {
     return this.connectionsService.listAvailableCalendars(id);
+  }
+
+  private getSingleQueryValue(value: string | string[] | undefined): string | null {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      const first = value[0];
+      return typeof first === 'string' && first.trim().length > 0 ? first : null;
+    }
+
+    return null;
   }
 }

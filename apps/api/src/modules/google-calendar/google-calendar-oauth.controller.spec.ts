@@ -127,6 +127,27 @@ describe('GoogleCalendarOAuthController', () => {
     );
   });
 
+  it('redirects to error route when callback is missing required params', async () => {
+    const res = {
+      redirect: vi.fn(),
+    };
+    oauthService.getAppBaseUrl.mockReturnValue('http://localhost:4200');
+    redirectService.buildErrorRedirectUrl.mockReturnValue(
+      'http://localhost:4200/google-calendar/connection?oauth=error&reason=missing_code_or_state',
+    );
+
+    await controller.callback({}, res as never);
+
+    expect(res.redirect).toHaveBeenCalledWith(
+      302,
+      redirectService.buildErrorRedirectUrl(
+        'http://localhost:4200',
+        '/google-calendar/connection',
+        'missing_code_or_state',
+      ),
+    );
+  });
+
   it('redirects with error after oauth callback if there is an error in the query', async () => {
     const res = {
       redirect: vi.fn(),
