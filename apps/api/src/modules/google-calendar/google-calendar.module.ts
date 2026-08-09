@@ -20,6 +20,11 @@ import {
 } from './google-calendar-provider.service';
 import { getGoogleOAuthConfig } from '../../common/config/google-oauth.config';
 import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
+import {
+  CalendarProviderBusyQuery,
+  CalendarProviderEventInput,
+} from './google-calendar-provider.types';
+import { GoogleCalendarAdapterService } from './google-calendar-adapter.service';
 
 @Module({
   controllers: [GoogleCalendarConnectionsController, GoogleCalendarOAuthController],
@@ -30,6 +35,7 @@ import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
     GoogleCalendarProviderService,
     GoogleOAuthStateService,
     GoogleOAuthRedirectService,
+    GoogleCalendarAdapterService,
     {
       provide: GOOGLE_OAUTH_RUNTIME_CONFIG,
       useFactory: () => getGoogleOAuthConfig(process.env),
@@ -79,7 +85,7 @@ import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
           },
         }),
         createCalendarClient: () => ({
-          listCalendars: async (accessToken: string) => {
+          async listCalendars(accessToken: string) {
             const auth = new google.auth.OAuth2(
               config.clientId,
               config.clientSecret,
@@ -100,12 +106,172 @@ import { GoogleOAuthRedirectService } from './google-oauth-redirect.service';
               .map((item) => ({
                 id: item.id as string,
                 summary: item.summary as string,
+                primary: item.primary ?? false,
+                access_role: item.accessRole ?? undefined,
+                time_zone: item.timeZone ?? undefined,
               }));
+          },
+          async getBusyTimes(accessToken: string, query: CalendarProviderBusyQuery) {
+            const auth = new google.auth.OAuth2(
+              config.clientId,
+              config.clientSecret,
+              config.redirectUri,
+            );
+            auth.setCredentials({ access_token: accessToken });
+
+            const calendar = google.calendar({
+              version: 'v3',
+              auth,
+            });
+            const response = await calendar.freebusy.query({
+              requestBody: {
+                timeMin: query.time_min,
+                timeMax: query.time_max,
+                timeZone: query.time_zone ?? undefined,
+                items: query.calendar_ids.map((id) => ({ id })),
+              },
+            });
+
+            const calendars = Object.fromEntries(
+              Object.entries(response.data.calendars ?? {}).map(([calendarId, details]) => [
+                calendarId,
+                {
+                  busy: (details?.busy ?? [])
+                    .filter((slot) => !!slot.start && !!slot.end)
+                    .map((slot) => ({
+                      start: slot.start as string,
+                      end: slot.end as string,
+                    })),
+                },
+              ]),
+            );
+
+            return { calendars };
+          },
+          async createEvent(accessToken: string, input: CalendarProviderEventInput) {
+            const auth = new google.auth.OAuth2(
+              config.clientId,
+              config.clientSecret,
+              config.redirectUri,
+            );
+            auth.setCredentials({ access_token: accessToken });
+
+            const calendar = google.calendar({
+              version: 'v3',
+              auth,
+            });
+            const response = await calendar.events.insert({
+              calendarId: input.calendar_id,
+              requestBody: {
+                summary: input.summary,
+                description: input.description ?? undefined,
+                start: {
+                  dateTime: input.start,
+                  timeZone: input.time_zone ?? undefined,
+                },
+                end: {
+                  dateTime: input.end,
+                  timeZone: input.time_zone ?? undefined,
+                },
+                attendees: input.attendees?.map((attendee) => ({
+                  email: attendee.email,
+                  displayName: attendee.display_name ?? undefined,
+                })),
+                location: input.location ?? undefined,
+              },
+            });
+
+            return {
+              id: response.data.id ?? '',
+              status: response.data.status ?? '',
+              htmlLink: response.data.htmlLink ?? undefined,
+              summary: response.data.summary ?? undefined,
+              description: response.data.description ?? undefined,
+              start: {
+                dateTime: response.data.start?.dateTime ?? '',
+              },
+              end: {
+                dateTime: response.data.end?.dateTime ?? '',
+              },
+            };
+          },
+          async updateEvent(
+            accessToken: string,
+            eventId: string,
+            input: CalendarProviderEventInput,
+          ) {
+            const auth = new google.auth.OAuth2(
+              config.clientId,
+              config.clientSecret,
+              config.redirectUri,
+            );
+            auth.setCredentials({ access_token: accessToken });
+
+            const calendar = google.calendar({
+              version: 'v3',
+              auth,
+            });
+            const response = await calendar.events.update({
+              calendarId: input.calendar_id,
+              eventId,
+              requestBody: {
+                summary: input.summary,
+                description: input.description ?? undefined,
+                start: {
+                  dateTime: input.start,
+                  timeZone: input.time_zone ?? undefined,
+                },
+                end: {
+                  dateTime: input.end,
+                  timeZone: input.time_zone ?? undefined,
+                },
+                attendees: input.attendees?.map((attendee) => ({
+                  email: attendee.email,
+                  displayName: attendee.display_name ?? undefined,
+                })),
+                location: input.location ?? undefined,
+              },
+            });
+
+            return {
+              id: response.data.id ?? '',
+              status: response.data.status ?? '',
+              htmlLink: response.data.htmlLink ?? undefined,
+              summary: response.data.summary ?? undefined,
+              description: response.data.description ?? undefined,
+              start: {
+                dateTime: response.data.start?.dateTime ?? '',
+              },
+              end: {
+                dateTime: response.data.end?.dateTime ?? '',
+              },
+            };
+          },
+          async cancelEvent(accessToken: string, calendarId: string, eventId: string) {
+            const auth = new google.auth.OAuth2(
+              config.clientId,
+              config.clientSecret,
+              config.redirectUri,
+            );
+            auth.setCredentials({ access_token: accessToken });
+
+            const calendar = google.calendar({
+              version: 'v3',
+              auth,
+            });
+            await calendar.events.delete({
+              calendarId,
+              eventId,
+            });
           },
         }),
       }),
     },
   ],
-  exports: [GoogleCalendarConnectionsService],
+  exports: [
+    GoogleCalendarConnectionsService,
+    GoogleCalendarProviderService,
+    GoogleCalendarAdapterService,
+  ],
 })
 export class GoogleCalendarModule {}
