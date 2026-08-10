@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { AvailabilityRulesRepository } from './availability-rules.repository';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
 import { UpdateAvailabilityRuleDto } from './dto/update-availability-rule.dto';
+import { UserRole } from '../../database/database.types';
 
 @Injectable()
 export class AvailabilityRulesService {
@@ -21,6 +22,24 @@ export class AvailabilityRulesService {
     return rule;
   }
 
+  async getByIdForUser(id: string, userId: string) {
+    const ownedRule = await this.availabilityRulesRepository.findByIdForUser(id, userId);
+
+    if (ownedRule) {
+      return ownedRule;
+    }
+
+    throw new NotFoundException('Availability rule not found for this user');
+  }
+
+  async getByIdForActor(id: string, actor: { userId: string; role: UserRole }) {
+    if (actor.role === 'PLATFORM_ADMIN') {
+      return this.getById(id);
+    }
+
+    return this.getByIdForUser(id, actor.userId);
+  }
+
   async create(user_id: string, params: CreateAvailabilityRuleDto) {
     this.validateRuleShape(params);
 
@@ -37,8 +56,12 @@ export class AvailabilityRulesService {
     });
   }
 
-  async update(id: string, params: UpdateAvailabilityRuleDto) {
-    const existing = await this.availabilityRulesRepository.findById(id);
+  async update(
+    actor: { userId: string; role: UserRole },
+    id: string,
+    params: UpdateAvailabilityRuleDto,
+  ) {
+    const existing = await this.getByIdForActor(id, actor);
 
     if (!existing) throw new NotFoundException('Availability rule not found');
 
@@ -46,7 +69,7 @@ export class AvailabilityRulesService {
 
     await this.availabilityRulesRepository.update(id, params);
 
-    return this.getById(id);
+    return this.getByIdForActor(id, actor);
   }
 
   async listActiveRulesForUser(userId: string) {

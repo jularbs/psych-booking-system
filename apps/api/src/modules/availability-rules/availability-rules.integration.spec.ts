@@ -288,4 +288,93 @@ describe('Availability rules integration tests', () => {
       })
       .expect(400);
   });
+
+  it("forbids a user from updating another user's availability rule", async () => {
+    const staff1 = await createAuthenticatedUser(context.app, {
+      email: 'staff1@example.com',
+      password: 'Password123!',
+      role: 'PSYCHOLOGIST',
+    });
+
+    const staff2 = await createAuthenticatedUser(context.app, {
+      email: 'staff2@example.com',
+      password: 'Password123!',
+      role: 'PSYCHOLOGIST',
+    });
+
+    const createResponse = await request(context.app.getHttpServer())
+      .post('/availability-rules')
+      .set('Authorization', `Bearer ${staff1.access_token}`)
+      .send({
+        description: 'Staff 1 availability',
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00:00',
+        end_time: '17:00:00',
+        is_active: true,
+      })
+      .expect(201);
+
+    const ruleId = createResponse.body.data.id;
+
+    await request(context.app.getHttpServer())
+      .patch(`/availability-rules/${ruleId}`)
+      .set('Authorization', `Bearer ${staff2.access_token}`)
+      .send({
+        description: 'Attempted update by staff 2',
+      })
+      .expect(404);
+  });
+
+  it('allows a PLATFORM_ADMIN to update any user availability rule', async () => {
+    const staff = await createAuthenticatedUser(context.app, {
+      email: 'staff@example.com',
+      password: 'Password123!',
+      role: 'PSYCHOLOGIST',
+    });
+
+    const admin = await createAuthenticatedUser(context.app, {
+      email: 'admin@example.com',
+      password: 'Password123!',
+      role: 'PLATFORM_ADMIN',
+    });
+
+    const createResponse = await request(context.app.getHttpServer())
+      .post('/availability-rules')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .send({
+        description: 'Staff availability',
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00:00',
+        end_time: '17:00:00',
+        is_active: true,
+      })
+      .expect(201);
+
+    const ruleId = createResponse.body.data.id;
+
+    await request(context.app.getHttpServer())
+      .patch(`/availability-rules/${ruleId}`)
+      .set('Authorization', `Bearer ${admin.access_token}`)
+      .send({
+        description: 'Updated by admin',
+      })
+      .expect(200);
+
+    const getResponse = await request(context.app.getHttpServer())
+      .get('/availability-rules/me')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .expect(200);
+
+    expect(getResponse.body.data).toHaveLength(1);
+    expect(getResponse.body.data[0]).toMatchObject({
+      description: 'Updated by admin',
+      rule_type: 'weekly_window',
+      day_of_week: 1,
+      start_time: '09:00:00',
+      end_time: '17:00:00',
+      is_active: true,
+    });
+  });
 });

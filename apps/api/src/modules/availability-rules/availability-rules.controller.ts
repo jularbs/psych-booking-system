@@ -15,6 +15,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { AvailabilityRulesService } from './availability-rules.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
+import { UserRole } from '../../database/database.types';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
@@ -44,7 +45,16 @@ export class AvailabilityRulesController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateAvailabilityRuleDto) {
-    return this.availabilityRulesService.update(id, dto);
+  async update(
+    @CurrentUser('sub') userId: string | undefined,
+    @CurrentUser('role') role: UserRole | undefined,
+    @Param('id') id: string,
+    @Body() dto: UpdateAvailabilityRuleDto,
+  ) {
+    if (!userId || !role) {
+      throw new UnauthorizedException('User ID or role is not available in the request context.');
+    }
+
+    return this.availabilityRulesService.update({ userId, role }, id, dto);
   }
 }
