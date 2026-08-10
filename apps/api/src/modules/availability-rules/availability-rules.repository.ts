@@ -16,6 +16,18 @@ export class AvailabilityRulesRepository {
       .executeTakeFirst();
   }
 
+  findByIdForUser(
+    id: string,
+    userId: string,
+  ): Promise<Selectable<AvailabilityRulesTable> | undefined> {
+    return this.db
+      .selectFrom('availability_rules')
+      .selectAll()
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .executeTakeFirst();
+  }
+
   listByUserId(userId: string): Promise<Selectable<AvailabilityRulesTable>[]> {
     return this.db
       .selectFrom('availability_rules')
