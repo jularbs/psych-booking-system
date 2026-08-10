@@ -4,6 +4,7 @@ import { AvailabilityRulesService } from './availability-rules.service';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
 import { UpdateAvailabilityRuleDto } from './dto/update-availability-rule.dto';
+import { UserRole } from '../../database/database.types';
 
 describe('AvailabilityRulesController', () => {
   let controller: AvailabilityRulesController;
@@ -82,7 +83,7 @@ describe('AvailabilityRulesController', () => {
     await expect(controller.create(undefined, dto)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('updates an existing rule', async () => {
+  it('updates an existing rule for current user with role context', async () => {
     const ruleId = 'rule-1';
     const updateParams = { description: 'Updated description' };
     const existingRule = {
@@ -98,10 +99,19 @@ describe('AvailabilityRulesController', () => {
     };
 
     service.update.mockResolvedValue({ ...existingRule, ...updateParams });
-    const result = await controller.update(ruleId, updateParams);
+    const result = await controller.update(
+      'user-id',
+      'PSYCHOLOGIST' as UserRole,
+      ruleId,
+      updateParams,
+    );
 
     expect(result).toEqual({ ...existingRule, ...updateParams });
-    expect(service.update).toHaveBeenCalledWith(ruleId, updateParams);
+    expect(service.update).toHaveBeenCalledWith(
+      { userId: 'user-id', role: 'PSYCHOLOGIST' },
+      ruleId,
+      updateParams,
+    );
   });
 
   it('throws when updating a rule that does not exist', async () => {
@@ -109,8 +119,14 @@ describe('AvailabilityRulesController', () => {
     const updateParams = { description: 'Updated description' };
 
     service.update.mockRejectedValue(new NotFoundException('Availability rule not found'));
-    await expect(controller.update(ruleId, updateParams)).rejects.toThrow(NotFoundException);
-    expect(service.update).toHaveBeenCalledWith(ruleId, updateParams);
+    await expect(controller.update('user-id', 'ASSISTANT', ruleId, updateParams)).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(service.update).toHaveBeenCalledWith(
+      { userId: 'user-id', role: 'ASSISTANT' },
+      ruleId,
+      updateParams,
+    );
   });
 
   it('throws when updating a rule with invalid parameters', async () => {
@@ -120,9 +136,26 @@ describe('AvailabilityRulesController', () => {
     service.update.mockRejectedValue(
       new Error('Weekly window rules require day_of_week, start_time, and end_time'),
     );
-    await expect(controller.update(ruleId, updateParams)).rejects.toThrow(
-      'Weekly window rules require day_of_week, start_time, and end_time',
+    await expect(
+      controller.update('user-id', 'PSYCHOLOGIST' as UserRole, ruleId, updateParams),
+    ).rejects.toThrow('Weekly window rules require day_of_week, start_time, and end_time');
+    expect(service.update).toHaveBeenCalledWith(
+      { userId: 'user-id', role: 'PSYCHOLOGIST' },
+      ruleId,
+      updateParams,
     );
-    expect(service.update).toHaveBeenCalledWith(ruleId, updateParams);
+  });
+
+  it('throws when updating a rule with missing current user or role', async () => {
+    const ruleId = 'rule-1';
+    const updateParams: UpdateAvailabilityRuleDto = { description: 'Updated description' };
+
+    await expect(
+      controller.update(undefined, 'PSYCHOLOGIST' as UserRole, ruleId, updateParams),
+    ).rejects.toThrow(UnauthorizedException);
+
+    await expect(controller.update('user-id', undefined, ruleId, updateParams)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 });

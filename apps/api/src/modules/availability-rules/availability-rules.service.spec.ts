@@ -3,6 +3,7 @@ import { AvailabilityRulesService } from './availability-rules.service';
 import { AvailabilityRulesRepository } from './availability-rules.repository';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
 import { NotFoundException } from '@nestjs/common';
+import { UserRole } from '../../database/database.types';
 
 describe('AvailabilityRulesService', () => {
   let service: AvailabilityRulesService;
@@ -12,6 +13,7 @@ describe('AvailabilityRulesService', () => {
     listByUserId: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    findByIdForUser: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -169,16 +171,18 @@ describe('AvailabilityRulesService', () => {
       date_end: null,
       is_active: true,
     };
+    const actor = { userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole };
 
     const updateParams = {
       description: 'Updated description',
     };
 
-    repository.findById.mockResolvedValue(existingRule);
+    repository.findByIdForUser
+      .mockResolvedValueOnce(existingRule)
+      .mockResolvedValueOnce({ ...existingRule, ...updateParams });
     repository.update.mockResolvedValue(undefined);
-    repository.findById.mockResolvedValue({ ...existingRule, ...updateParams });
 
-    const result = await service.update(ruleId, updateParams);
+    const result = await service.update(actor, ruleId, updateParams);
 
     expect(repository.update).toHaveBeenCalledWith(ruleId, updateParams);
 
@@ -186,11 +190,13 @@ describe('AvailabilityRulesService', () => {
   });
 
   it('throws not found when updating a non-existent rule', async () => {
-    repository.findById.mockResolvedValue(undefined);
+    repository.findByIdForUser.mockResolvedValue(undefined);
 
-    await expect(service.update('missing-id', { description: 'test' })).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.update({ userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole }, 'missing-id', {
+        description: 'test',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('throws error when updating a weekly window rule with missing fields', async () => {
@@ -208,11 +214,13 @@ describe('AvailabilityRulesService', () => {
       is_active: true,
     };
 
-    repository.findById.mockResolvedValue(existingRule);
+    repository.findByIdForUser.mockResolvedValue(existingRule);
 
-    await expect(service.update(ruleId, { rule_type: 'weekly_window' })).rejects.toThrow(
-      'Weekly window rules require day_of_week, start_time, and end_time',
-    );
+    await expect(
+      service.update({ userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole }, ruleId, {
+        rule_type: 'weekly_window',
+      }),
+    ).rejects.toThrow('Weekly window rules require day_of_week, start_time, and end_time');
   });
 
   it('throws error when updating a blackout window rule with missing fields', async () => {
@@ -230,10 +238,86 @@ describe('AvailabilityRulesService', () => {
       is_active: true,
     };
 
-    repository.findById.mockResolvedValue(existingRule);
+    repository.findByIdForUser.mockResolvedValue(existingRule);
 
-    await expect(service.update(ruleId, { rule_type: 'blackout_window' })).rejects.toThrow(
-      'Blackout window rules require date_start and date_end',
+    await expect(
+      service.update({ userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole }, ruleId, {
+        rule_type: 'blackout_window',
+      }),
+    ).rejects.toThrow('Blackout window rules require date_start and date_end');
+  });
+
+  it('allows PLATFORM_ADMIN to update any rule', async () => {
+    const ruleId = 'rule-1';
+    const existingRule = {
+      id: ruleId,
+      user_id: 'user-2', // Different user
+      rule_type: 'weekly_window',
+      day_of_week: 1,
+      start_time: '09:00',
+      end_time: '17:00',
+      description: null,
+      date_start: null,
+      date_end: null,
+      is_active: true,
+    };
+    const actor = { userId: 'admin-user', role: 'PLATFORM_ADMIN' as UserRole };
+
+    const updateParams = {
+      description: 'Admin updated description',
+    };
+
+    repository.findById
+      .mockResolvedValueOnce(existingRule)
+      .mockResolvedValueOnce({ ...existingRule, ...updateParams });
+    repository.update.mockResolvedValue(undefined);
+
+    const result = await service.update(actor, ruleId, updateParams);
+
+    expect(repository.update).toHaveBeenCalledWith(ruleId, updateParams);
+    expect(result).toEqual({ ...existingRule, ...updateParams });
+  });
+
+  it('allows rule owner to update their own rule', async () => {
+    const ruleId = 'rule-1';
+    const existingRule = {
+      id: ruleId,
+      user_id: 'user-1',
+      rule_type: 'weekly_window',
+      day_of_week: 1,
+      start_time: '09:00',
+      end_time: '17:00',
+      description: null,
+      date_start: null,
+      date_end: null,
+      is_active: true,
+    };
+    const actor = { userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole };
+
+    const updateParams = {
+      description: 'Owner updated description',
+    };
+
+    repository.findByIdForUser
+      .mockResolvedValueOnce(existingRule)
+      .mockResolvedValueOnce({ ...existingRule, ...updateParams });
+    repository.update.mockResolvedValue(undefined);
+
+    const result = await service.update(actor, ruleId, updateParams);
+
+    expect(repository.update).toHaveBeenCalledWith(ruleId, updateParams);
+    expect(result).toEqual({ ...existingRule, ...updateParams });
+  });
+
+  it('throws not found when a non-owner tries to update a rule', async () => {
+    const ruleId = 'rule-1';
+
+    const actor = { userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole };
+
+    repository.findByIdForUser.mockResolvedValue(undefined);
+
+    await expect(service.update(actor, ruleId, { description: 'test' })).rejects.toBeInstanceOf(
+      NotFoundException,
     );
   });
 });
