@@ -3,7 +3,8 @@ import { GoogleCalendarAvailabilityService } from '../google-calendar/google-cal
 import { AvailabilityRulesService } from '../availability-rules/availability-rules.service';
 import { TimeRange, GeneratedAvailabilitySlot } from './availability-slot.types';
 import { QueryAvailabilitySlotsDto } from './dto/query-availability-slots.dto';
-
+import { DateTime } from 'luxon';
+import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
 @Injectable()
 export class AvailabilitySlotGenerationService {
   constructor(
@@ -13,28 +14,34 @@ export class AvailabilitySlotGenerationService {
 
   async querySlots(
     params: QueryAvailabilitySlotsDto & { user_id: string },
-  ): Promise<{ slots: GeneratedAvailabilitySlot[] }> {
-    const windowStart = new Date(params.time_min);
-    const windowEnd = new Date(params.time_max);
+  ): Promise<{ slots: GeneratedAvailabilitySlot[]; time_zone: string }> {
+    const timeZone = params.time_zone ?? DEFAULT_SCHEDULING_TIMEZONE;
+    const windowStartUtc = DateTime.fromISO(params.time_min, { zone: 'utc' });
+    const windowEndUtc = DateTime.fromISO(params.time_max, { zone: 'utc' });
 
-    if (Number.isNaN(windowStart.getTime()) || Number.isNaN(windowEnd.getTime())) {
-      throw new BadRequestException('Invalid time ranges.');
+    if (!windowStartUtc.isValid || !windowEndUtc.isValid) {
+      throw new BadRequestException('Invalid time range');
     }
 
-    if (windowStart >= windowEnd) {
-      throw new BadRequestException('time_min must be before time_max.');
+    if (windowStartUtc >= windowEndUtc) {
+      throw new BadRequestException('timeMin must be before timeMax');
     }
 
     const rules = await this.availabilityRulesService.listActiveRulesForUser(params.user_id);
 
-    const availabilityWindows = this.buildAvailabilityWindows(rules, windowStart, windowEnd);
-    const blackoutWindows = this.buildBlackoutWindows(rules, windowStart, windowEnd);
+    const availabilityWindows = this.buildAvailabilityWindows(
+      rules,
+      windowStartUtc,
+      windowEndUtc,
+      timeZone,
+    );
+    const blackoutWindows = this.buildBlackoutWindows(rules, windowStartUtc, windowEndUtc);
 
     const busyResponse = await this.googleCalendarAvailabilityService.queryMyAvailability({
       user_id: params.user_id,
-      time_min: windowStart.toISOString(),
-      time_max: windowEnd.toISOString(),
-      time_zone: params.time_zone,
+      time_min: params.time_min,
+      time_max: params.time_max,
+      time_zone: timeZone,
     });
 
     const busyWindows = busyResponse.busy_times.map((busy) => ({
@@ -52,7 +59,7 @@ export class AvailabilitySlotGenerationService {
       params.slot_interval_minutes,
     );
 
-    return { slots };
+    return { slots, time_zone: timeZone };
   }
 
   private buildAvailabilityWindows(
@@ -62,20 +69,16 @@ export class AvailabilitySlotGenerationService {
       start_time: string | null;
       end_time: string | null;
     }>,
-    windowStart: Date,
-    windowEnd: Date,
+    windowStartUtc: DateTime,
+    windowEndUtc: DateTime,
+    timeZone: string,
   ): TimeRange[] {
     const windows: TimeRange[] = [];
-    const cursor = new Date(windowStart);
+    let cursor = windowStartUtc.setZone(timeZone).startOf('day');
+    const endLocal = windowEndUtc.setZone(timeZone);
 
-    while (cursor < windowEnd) {
-      const dayStart = new Date(cursor);
-      dayStart.setUTCHours(0, 0, 0, 0);
-
-      const dayEnd = new Date(dayStart);
-      dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-      const dayOfWeek = dayStart.getUTCDay();
+    while (cursor < endLocal) {
+      const dayOfWeek = this.toAppDayOfWeek(cursor);
 
       const dayRules = rules.filter(
         (rule) =>
@@ -86,19 +89,21 @@ export class AvailabilitySlotGenerationService {
       );
 
       for (const rule of dayRules) {
-        const start = this.combineDayAndTime(dayStart, rule.start_time as string);
-        const end = this.combineDayAndTime(dayStart, rule.end_time as string);
+        const startLocal = this.combineLocalDayAndTime(cursor, rule.start_time as string);
+        const endLocal = this.combineLocalDayAndTime(cursor, rule.end_time as string);
 
-        if (start > windowStart && end < windowEnd) {
+        const startUtc = startLocal.toUTC();
+        const endUtc = endLocal.toUTC();
+
+        if (endUtc > windowStartUtc && startUtc < windowEndUtc) {
           windows.push({
-            start: new Date(Math.max(start.getTime(), windowStart.getTime())).toISOString(),
-            end: new Date(Math.min(end.getTime(), windowEnd.getTime())).toISOString(),
+            start: DateTime.max(startUtc, windowStartUtc).toISO() as string,
+            end: DateTime.min(endUtc, windowEndUtc).toISO() as string,
           });
         }
       }
 
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      cursor.setUTCHours(0, 0, 0, 0);
+      cursor = cursor.plus({ days: 1 }).startOf('day');
     }
 
     return this.mergeRanges(windows);
@@ -110,24 +115,24 @@ export class AvailabilitySlotGenerationService {
       date_start: string | null;
       date_end: string | null;
     }>,
-    windowStart: Date,
-    windowEnd: Date,
+    windowStartUtc: DateTime,
+    windowEndUtc: DateTime,
   ): TimeRange[] {
     const blackoutRules = rules.filter(
       (rule) => rule.rule_type === 'blackout_window' && rule.date_start && rule.date_end,
     );
 
     const blackoutWindows: TimeRange[] = blackoutRules.map((rule) => {
-      const start = new Date(rule.date_start as string);
-      const end = new Date(rule.date_end as string);
+      const start = DateTime.fromISO(rule.date_start as string, { zone: 'utc' });
+      const end = DateTime.fromISO(rule.date_end as string, { zone: 'utc' }).plus({ days: 1 });
 
       return {
-        start: new Date(Math.max(start.getTime(), windowStart.getTime())).toISOString(),
-        end: new Date(Math.min(end.getTime(), windowEnd.getTime())).toISOString(),
+        start: DateTime.max(start, windowStartUtc).toISO() as string,
+        end: DateTime.min(end, windowEndUtc).toISO() as string,
       };
     });
 
-    return blackoutWindows.filter((window) => new Date(window.start) < new Date(window.end));
+    return blackoutWindows.filter((window) => window.start < window.end);
   }
 
   private subtractRanges(sourceRanges: TimeRange[], blockedRanges: TimeRange[]): TimeRange[] {
@@ -137,10 +142,10 @@ export class AvailabilitySlotGenerationService {
       const next: TimeRange[] = [];
 
       for (const source of result) {
-        const sourceStart = new Date(source.start).getTime();
-        const sourceEnd = new Date(source.end).getTime();
-        const blockedStart = new Date(blocked.start).getTime();
-        const blockedEnd = new Date(blocked.end).getTime();
+        const sourceStart = DateTime.fromISO(source.start, { zone: 'utc' }).toMillis();
+        const sourceEnd = DateTime.fromISO(source.end, { zone: 'utc' }).toMillis();
+        const blockedStart = DateTime.fromISO(blocked.start, { zone: 'utc' }).toMillis();
+        const blockedEnd = DateTime.fromISO(blocked.end, { zone: 'utc' }).toMillis();
 
         if (blockedEnd <= sourceStart || blockedStart >= sourceEnd) {
           next.push(source);
@@ -149,15 +154,15 @@ export class AvailabilitySlotGenerationService {
 
         if (blockedStart > sourceStart) {
           next.push({
-            start: new Date(sourceStart).toISOString(),
-            end: new Date(blockedStart).toISOString(),
+            start: DateTime.fromMillis(sourceStart, { zone: 'utc' }).toISO() as string,
+            end: DateTime.fromMillis(blockedStart, { zone: 'utc' }).toISO() as string,
           });
         }
 
         if (blockedEnd < sourceEnd) {
           next.push({
-            start: new Date(blockedEnd).toISOString(),
-            end: new Date(sourceEnd).toISOString(),
+            start: DateTime.fromMillis(blockedEnd, { zone: 'utc' }).toISO() as string,
+            end: DateTime.fromMillis(sourceEnd, { zone: 'utc' }).toISO() as string,
           });
         }
       }
@@ -165,7 +170,7 @@ export class AvailabilitySlotGenerationService {
       result = next;
     }
 
-    return result.filter((range) => new Date(range.start) < new Date(range.end));
+    return result.filter((range) => range.start < range.end);
   }
 
   private generateSlotsFromRanges(
@@ -178,8 +183,8 @@ export class AvailabilitySlotGenerationService {
     const intervalMs = slotIntervalMinutes * 60 * 1000;
 
     for (const range of ranges) {
-      const rangeStart = new Date(range.start).getTime();
-      const rangeEnd = new Date(range.end).getTime();
+      const rangeStart = DateTime.fromISO(range.start, { zone: 'utc' }).toMillis();
+      const rangeEnd = DateTime.fromISO(range.end, { zone: 'utc' }).toMillis();
 
       for (
         let slotStart = rangeStart;
@@ -187,8 +192,8 @@ export class AvailabilitySlotGenerationService {
         slotStart += intervalMs
       ) {
         slots.push({
-          start: new Date(slotStart).toISOString(),
-          end: new Date(slotStart + durationMs).toISOString(),
+          start: DateTime.fromMillis(slotStart, { zone: 'utc' }).toISO() as string,
+          end: DateTime.fromMillis(slotStart + durationMs, { zone: 'utc' }).toISO() as string,
         });
       }
     }
@@ -200,7 +205,9 @@ export class AvailabilitySlotGenerationService {
     if (ranges.length === 0) return [];
 
     const sortedRanges = [...ranges].sort(
-      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+      (a, b) =>
+        DateTime.fromISO(a.start, { zone: 'utc' }).toMillis() -
+        DateTime.fromISO(b.start, { zone: 'utc' }).toMillis(),
     );
 
     const merged: TimeRange[] = [sortedRanges[0]];
@@ -209,8 +216,12 @@ export class AvailabilitySlotGenerationService {
       const current = sortedRanges[i];
       const lastMerged = merged[merged.length - 1];
 
-      if (new Date(current.start).getTime() <= new Date(lastMerged.end).getTime()) {
-        if (new Date(current.end).getTime() > new Date(lastMerged.end).getTime()) {
+      const currentStart = DateTime.fromISO(current.start, { zone: 'utc' }).toMillis();
+      const currentEnd = DateTime.fromISO(current.end, { zone: 'utc' }).toMillis();
+      const lastMergedEnd = DateTime.fromISO(lastMerged.end, { zone: 'utc' }).toMillis();
+
+      if (currentStart <= lastMergedEnd) {
+        if (currentEnd > lastMergedEnd) {
           lastMerged.end = current.end;
         }
       } else {
@@ -221,11 +232,18 @@ export class AvailabilitySlotGenerationService {
     return merged;
   }
 
-  private combineDayAndTime(day: Date, time: string): Date {
+  private combineLocalDayAndTime(day: DateTime, time: string): DateTime {
     const [hours, minutes, seconds] = time.split(':').map(Number);
-    const result = new Date(day);
-    result.setUTCHours(hours, minutes, seconds ?? 0, 0);
 
-    return result;
+    return day.set({
+      hour: hours,
+      minute: minutes,
+      second: seconds || 0,
+      millisecond: 0,
+    });
+  }
+
+  private toAppDayOfWeek(dateTime: DateTime): number {
+    return dateTime.weekday % 7;
   }
 }
