@@ -81,13 +81,13 @@ export class AvailabilitySlotGenerationService {
         (rule) =>
           rule.rule_type === 'weekly_window' &&
           rule.day_of_week === dayOfWeek &&
-          rule.start_time &&
-          rule.end_time,
+          rule.start_time !== null &&
+          rule.end_time !== null,
       );
 
       for (const rule of dayRules) {
-        const start = this.combineDayAndTime(dayStart, rule.start_time!);
-        const end = this.combineDayAndTime(dayStart, rule.end_time!);
+        const start = this.combineDayAndTime(dayStart, rule.start_time as string);
+        const end = this.combineDayAndTime(dayStart, rule.end_time as string);
 
         if (start > windowStart && end < windowEnd) {
           windows.push({
