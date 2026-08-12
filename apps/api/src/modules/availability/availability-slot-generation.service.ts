@@ -124,7 +124,7 @@ export class AvailabilitySlotGenerationService {
 
     const blackoutWindows: TimeRange[] = blackoutRules.map((rule) => {
       const start = DateTime.fromISO(rule.date_start as string, { zone: 'utc' });
-      const end = DateTime.fromISO(rule.date_end as string, { zone: 'utc' }).plus({ days: 1 });
+      const end = DateTime.fromISO(rule.date_end as string, { zone: 'utc' });
 
       return {
         start: DateTime.max(start, windowStartUtc).toISO() as string,
