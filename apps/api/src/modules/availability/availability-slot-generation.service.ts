@@ -16,8 +16,13 @@ export class AvailabilitySlotGenerationService {
     params: QueryAvailabilitySlotsDto & { user_id: string },
   ): Promise<{ slots: GeneratedAvailabilitySlot[]; time_zone: string }> {
     const timeZone = params.time_zone ?? DEFAULT_SCHEDULING_TIMEZONE;
-    const windowStartUtc = DateTime.fromISO(params.time_min, { zone: 'utc' });
-    const windowEndUtc = DateTime.fromISO(params.time_max, { zone: 'utc' });
+
+    if (!DateTime.now().setZone(timeZone).isValid) {
+      throw new BadRequestException('Invalid time zone');
+    }
+
+    const windowStartUtc = this.parseRequestInstantToUtc(params.time_min, timeZone);
+    const windowEndUtc = this.parseRequestInstantToUtc(params.time_max, timeZone);
 
     if (!windowStartUtc.isValid || !windowEndUtc.isValid) {
       throw new BadRequestException('Invalid time range');
@@ -228,6 +233,15 @@ export class AvailabilitySlotGenerationService {
     }
 
     return merged;
+  }
+
+  private parseRequestInstantToUtc(value: string, timeZone: string): DateTime {
+    const hasExplicitOffset = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+    const parsed = hasExplicitOffset
+      ? DateTime.fromISO(value, { setZone: true })
+      : DateTime.fromISO(value, { zone: timeZone });
+
+    return parsed.toUTC();
   }
 
   private combineLocalDayAndTime(day: DateTime, time: string): DateTime {

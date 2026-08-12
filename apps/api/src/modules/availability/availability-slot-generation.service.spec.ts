@@ -188,6 +188,47 @@ describe('AvailabilitySlotGenerationService', () => {
     ]);
   });
 
+  it('interprets timezone-naive query bounds using request time_zone', async () => {
+    availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
+      {
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00',
+        end_time: '12:00',
+      },
+    ]);
+
+    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
+      calendar_id: 'primary',
+      busy_times: [],
+    });
+
+    const result = await service.querySlots({
+      user_id: 'user-1',
+      time_min: '2026-08-10T08:30:00.000',
+      time_max: '2026-08-10T10:30:00.000',
+      time_zone: 'Asia/Manila',
+      slot_duration_minutes: 30,
+      slot_interval_minutes: 30,
+    });
+
+    expect(result.time_zone).toBe('Asia/Manila');
+    expect(result.slots).toEqual([
+      {
+        start: '2026-08-10T01:00:00.000Z',
+        end: '2026-08-10T01:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T01:30:00.000Z',
+        end: '2026-08-10T02:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T02:00:00.000Z',
+        end: '2026-08-10T02:30:00.000Z',
+      },
+    ]);
+  });
+
   it('throws if invalid time range is provided', async () => {
     await expect(
       service.querySlots({
