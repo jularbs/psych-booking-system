@@ -20,7 +20,10 @@ describe('AvailabilitySlotGenerationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AvailabilitySlotGenerationService,
-        { provide: AvailabilityRulesService, useValue: availabilityRulesService },
+        {
+          provide: AvailabilityRulesService,
+          useValue: availabilityRulesService,
+        },
         {
           provide: GoogleCalendarAvailabilityService,
           useValue: googleCalendarAvailabilityService,
@@ -31,46 +34,54 @@ describe('AvailabilitySlotGenerationService', () => {
     service = module.get<AvailabilitySlotGenerationService>(AvailabilitySlotGenerationService);
   });
 
-  it('generates slots from weekly windows excluding google busy blocks', async () => {
+  it('uses Asia/Manila as default timezone and returns UTC slots', async () => {
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
       {
         rule_type: 'weekly_window',
         day_of_week: 1,
         start_time: '09:00',
-        end_time: '17:00',
+        end_time: '12:00',
+        date_start: null,
+        date_end: null,
+        time_zone: 'Asia/Manila',
       },
     ]);
 
     googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
       calendar_id: 'primary',
-      busy_times: [
-        { start: '2024-06-03T10:00:00Z', end: '2024-06-03T11:00:00Z' },
-        { start: '2024-06-03T15:00:00Z', end: '2024-06-03T16:00:00Z' },
-      ],
+      busy_times: [{ start: '2026-08-10T02:00:00.000Z', end: '2026-08-10T02:30:00.000Z' }],
     });
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2024-06-03T00:00:00Z',
-      time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
+      time_min: '2026-08-09T16:00:00.000Z',
+      time_max: '2026-08-10T16:00:00.000Z',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
 
+    expect(result.time_zone).toBe('Asia/Manila');
     expect(result.slots).toEqual([
-      { start: '2024-06-03T09:00:00.000Z', end: '2024-06-03T09:30:00.000Z' },
-      { start: '2024-06-03T09:30:00.000Z', end: '2024-06-03T10:00:00.000Z' },
-      { start: '2024-06-03T11:00:00.000Z', end: '2024-06-03T11:30:00.000Z' },
-      { start: '2024-06-03T11:30:00.000Z', end: '2024-06-03T12:00:00.000Z' },
-      { start: '2024-06-03T12:00:00.000Z', end: '2024-06-03T12:30:00.000Z' },
-      { start: '2024-06-03T12:30:00.000Z', end: '2024-06-03T13:00:00.000Z' },
-      { start: '2024-06-03T13:00:00.000Z', end: '2024-06-03T13:30:00.000Z' },
-      { start: '2024-06-03T13:30:00.000Z', end: '2024-06-03T14:00:00.000Z' },
-      { start: '2024-06-03T14:00:00.000Z', end: '2024-06-03T14:30:00.000Z' },
-      { start: '2024-06-03T14:30:00.000Z', end: '2024-06-03T15:00:00.000Z' },
-      { start: '2024-06-03T16:00:00.000Z', end: '2024-06-03T16:30:00.000Z' },
-      { start: '2024-06-03T16:30:00.000Z', end: '2024-06-03T17:00:00.000Z' },
+      {
+        start: '2026-08-10T01:00:00.000Z',
+        end: '2026-08-10T01:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T01:30:00.000Z',
+        end: '2026-08-10T02:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T02:30:00.000Z',
+        end: '2026-08-10T03:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:00:00.000Z',
+        end: '2026-08-10T03:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:30:00.000Z',
+        end: '2026-08-10T04:00:00.000Z',
+      },
     ]);
   });
 
@@ -80,12 +91,17 @@ describe('AvailabilitySlotGenerationService', () => {
         rule_type: 'weekly_window',
         day_of_week: 1,
         start_time: '09:00',
-        end_time: '17:00',
+        end_time: '12:00',
+        time_zone: 'Asia/Manila',
       },
       {
         rule_type: 'blackout_window',
-        date_start: '2024-06-03T12:00:00Z',
-        date_end: '2024-06-03T13:00:00Z',
+        day_of_week: null,
+        start_time: null,
+        end_time: null,
+        date_start: '2026-08-10T01:30:00.000Z',
+        date_end: '2026-08-10T02:30:00.000Z',
+        time_zone: 'Asia/Manila',
       },
     ]);
 
@@ -96,28 +112,120 @@ describe('AvailabilitySlotGenerationService', () => {
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2024-06-03T00:00:00Z',
-      time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
+      time_min: '2026-08-09T16:00:00.000Z',
+      time_max: '2026-08-10T16:00:00.000Z',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
 
     expect(result.slots).toEqual([
-      { start: '2024-06-03T09:00:00.000Z', end: '2024-06-03T09:30:00.000Z' },
-      { start: '2024-06-03T09:30:00.000Z', end: '2024-06-03T10:00:00.000Z' },
-      { start: '2024-06-03T10:00:00.000Z', end: '2024-06-03T10:30:00.000Z' },
-      { start: '2024-06-03T10:30:00.000Z', end: '2024-06-03T11:00:00.000Z' },
-      { start: '2024-06-03T11:00:00.000Z', end: '2024-06-03T11:30:00.000Z' },
-      { start: '2024-06-03T11:30:00.000Z', end: '2024-06-03T12:00:00.000Z' },
-      { start: '2024-06-03T13:00:00.000Z', end: '2024-06-03T13:30:00.000Z' },
-      { start: '2024-06-03T13:30:00.000Z', end: '2024-06-03T14:00:00.000Z' },
-      { start: '2024-06-03T14:00:00.000Z', end: '2024-06-03T14:30:00.000Z' },
-      { start: '2024-06-03T14:30:00.000Z', end: '2024-06-03T15:00:00.000Z' },
-      { start: '2024-06-03T15:00:00.000Z', end: '2024-06-03T15:30:00.000Z' },
-      { start: '2024-06-03T15:30:00.000Z', end: '2024-06-03T16:00:00.000Z' },
-      { start: '2024-06-03T16:00:00.000Z', end: '2024-06-03T16:30:00.000Z' },
-      { start: '2024-06-03T16:30:00.000Z', end: '2024-06-03T17:00:00.000Z' },
+      {
+        start: '2026-08-10T01:00:00.000Z',
+        end: '2026-08-10T01:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T02:30:00.000Z',
+        end: '2026-08-10T03:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:00:00.000Z',
+        end: '2026-08-10T03:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:30:00.000Z',
+        end: '2026-08-10T04:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('blocks correct slots when request timezone is Asia/Manila and blackout is UTC', async () => {
+    availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
+      {
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00',
+        end_time: '12:00',
+      },
+      {
+        rule_type: 'blackout_window',
+        date_start: '2026-08-10T01:30:00.000Z',
+        date_end: '2026-08-10T02:30:00.000Z',
+      },
+    ]);
+
+    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
+      calendar_id: 'primary',
+      busy_times: [],
+    });
+
+    const result = await service.querySlots({
+      user_id: 'user-1',
+      time_min: '2026-08-09T16:00:00.000Z',
+      time_max: '2026-08-10T16:00:00.000Z',
+      time_zone: 'Asia/Manila',
+      slot_duration_minutes: 30,
+      slot_interval_minutes: 30,
+    });
+
+    expect(result.time_zone).toBe('Asia/Manila');
+    expect(result.slots).toEqual([
+      {
+        start: '2026-08-10T01:00:00.000Z',
+        end: '2026-08-10T01:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T02:30:00.000Z',
+        end: '2026-08-10T03:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:00:00.000Z',
+        end: '2026-08-10T03:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T03:30:00.000Z',
+        end: '2026-08-10T04:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('interprets timezone-naive query bounds using request time_zone', async () => {
+    availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
+      {
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00',
+        end_time: '12:00',
+      },
+    ]);
+
+    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
+      calendar_id: 'primary',
+      busy_times: [],
+    });
+
+    const result = await service.querySlots({
+      user_id: 'user-1',
+      time_min: '2026-08-10T08:30:00.000',
+      time_max: '2026-08-10T10:30:00.000',
+      time_zone: 'Asia/Manila',
+      slot_duration_minutes: 30,
+      slot_interval_minutes: 30,
+    });
+
+    expect(result.time_zone).toBe('Asia/Manila');
+    expect(result.slots).toEqual([
+      {
+        start: '2026-08-10T01:00:00.000Z',
+        end: '2026-08-10T01:30:00.000Z',
+      },
+      {
+        start: '2026-08-10T01:30:00.000Z',
+        end: '2026-08-10T02:00:00.000Z',
+      },
+      {
+        start: '2026-08-10T02:00:00.000Z',
+        end: '2026-08-10T02:30:00.000Z',
+      },
     ]);
   });
 
@@ -171,26 +279,32 @@ describe('AvailabilitySlotGenerationService', () => {
     expect(result.slots).toEqual([]);
   });
 
-  it('returns empty slots if all time is blocked by busy times', async () => {
+  it('returns empty slots if all time is blocked by busy times with timezone handling', async () => {
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
       {
         rule_type: 'weekly_window',
         day_of_week: 1,
         start_time: '09:00',
-        end_time: '17:00',
+        end_time: '12:00',
+        time_zone: 'Asia/Manila',
       },
     ]);
 
     googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
       calendar_id: 'primary',
-      busy_times: [{ start: '2024-06-03T09:00:00Z', end: '2024-06-03T17:00:00Z' }],
+      busy_times: [
+        {
+          start: '2026-08-10T01:00:00.000Z', // 09:00 Asia/Manila
+          end: '2026-08-10T04:00:00.000Z', // 12:00 Asia/Manila
+        },
+      ],
     });
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2024-06-03T00:00:00Z',
-      time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
+      time_min: '2026-08-09T16:00:00.000Z',
+      time_max: '2026-08-10T16:00:00.000Z',
+      time_zone: 'Asia/Manila',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
@@ -204,12 +318,13 @@ describe('AvailabilitySlotGenerationService', () => {
         rule_type: 'weekly_window',
         day_of_week: 1,
         start_time: '09:00',
-        end_time: '17:00',
+        end_time: '12:00',
+        time_zone: 'Asia/Manila',
       },
       {
         rule_type: 'blackout_window',
-        date_start: '2024-06-03T09:00:00Z',
-        date_end: '2024-06-03T17:00:00Z',
+        date_start: '2026-08-10T01:00:00.000Z',
+        date_end: '2026-08-10T04:00:00.000Z',
       },
     ]);
 
@@ -220,9 +335,9 @@ describe('AvailabilitySlotGenerationService', () => {
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2024-06-03T00:00:00Z',
-      time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
+      time_min: '2026-08-09T16:00:00.000Z',
+      time_max: '2026-08-10T16:00:00.000Z',
+      time_zone: 'Asia/Manila',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
