@@ -19,3 +19,15 @@ export function combineLocalDayAndTime(day: DateTime, time: string): DateTime {
     millisecond: 0,
   });
 }
+
+export function rangesOverlap(
+  range1: { start: string; end: string },
+  range2: { start: string; end: string },
+): boolean {
+  const start1 = DateTime.fromISO(range1.start, { zone: 'utc' });
+  const end1 = DateTime.fromISO(range1.end, { zone: 'utc' });
+  const start2 = DateTime.fromISO(range2.start, { zone: 'utc' });
+  const end2 = DateTime.fromISO(range2.end, { zone: 'utc' });
+
+  return start1 < end2 && start2 < end1;
+}
