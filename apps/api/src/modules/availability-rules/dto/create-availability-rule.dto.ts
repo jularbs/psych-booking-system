@@ -20,8 +20,8 @@ export class CreateAvailabilityRuleDto {
 
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(6)
+  @Min(1)
+  @Max(7)
   day_of_week?: number;
 
   @IsOptional()

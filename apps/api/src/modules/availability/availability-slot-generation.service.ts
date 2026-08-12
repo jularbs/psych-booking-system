@@ -78,12 +78,10 @@ export class AvailabilitySlotGenerationService {
     const endLocal = windowEndUtc.setZone(timeZone);
 
     while (cursor < endLocal) {
-      const dayOfWeek = this.toAppDayOfWeek(cursor);
-
       const dayRules = rules.filter(
         (rule) =>
           rule.rule_type === 'weekly_window' &&
-          rule.day_of_week === dayOfWeek &&
+          rule.day_of_week === cursor.weekday &&
           rule.start_time !== null &&
           rule.end_time !== null,
       );
@@ -241,9 +239,5 @@ export class AvailabilitySlotGenerationService {
       second: seconds || 0,
       millisecond: 0,
     });
-  }
-
-  private toAppDayOfWeek(dateTime: DateTime): number {
-    return dateTime.weekday % 7;
   }
 }
