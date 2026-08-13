@@ -5,6 +5,7 @@ import { TimeRange, GeneratedAvailabilitySlot } from './availability-slot.types'
 import { QueryAvailabilitySlotsDto } from './dto/query-availability-slots.dto';
 import { DateTime } from 'luxon';
 import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
+import { combineLocalDayAndTime, convertToUTC } from '../../common/utils/date.utils';
 @Injectable()
 export class AvailabilitySlotGenerationService {
   constructor(
@@ -21,8 +22,8 @@ export class AvailabilitySlotGenerationService {
       throw new BadRequestException('Invalid time zone');
     }
 
-    const windowStartUtc = this.parseRequestInstantToUtc(params.time_min, timeZone);
-    const windowEndUtc = this.parseRequestInstantToUtc(params.time_max, timeZone);
+    const windowStartUtc = convertToUTC(params.time_min, timeZone);
+    const windowEndUtc = convertToUTC(params.time_max, timeZone);
 
     if (!windowStartUtc.isValid || !windowEndUtc.isValid) {
       throw new BadRequestException('Invalid time range');
@@ -92,8 +93,8 @@ export class AvailabilitySlotGenerationService {
       );
 
       for (const rule of dayRules) {
-        const startLocal = this.combineLocalDayAndTime(cursor, rule.start_time as string);
-        const endLocal = this.combineLocalDayAndTime(cursor, rule.end_time as string);
+        const startLocal = combineLocalDayAndTime(cursor, rule.start_time as string);
+        const endLocal = combineLocalDayAndTime(cursor, rule.end_time as string);
 
         const startUtc = startLocal.toUTC();
         const endUtc = endLocal.toUTC();
@@ -233,25 +234,5 @@ export class AvailabilitySlotGenerationService {
     }
 
     return merged;
-  }
-
-  private parseRequestInstantToUtc(value: string, timeZone: string): DateTime {
-    const hasExplicitOffset = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
-    const parsed = hasExplicitOffset
-      ? DateTime.fromISO(value, { setZone: true })
-      : DateTime.fromISO(value, { zone: timeZone });
-
-    return parsed.toUTC();
-  }
-
-  private combineLocalDayAndTime(day: DateTime, time: string): DateTime {
-    const [hours, minutes, seconds] = time.split(':').map(Number);
-
-    return day.set({
-      hour: hours,
-      minute: minutes,
-      second: seconds || 0,
-      millisecond: 0,
-    });
   }
 }
