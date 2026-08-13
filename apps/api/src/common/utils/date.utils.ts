@@ -31,3 +31,20 @@ export function rangesOverlap(
 
   return start1 < end2 && start2 < end1;
 }
+
+export function normalizeInstantToUtcIso(value: string | Date | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const dateTime =
+    typeof value === 'string'
+      ? DateTime.fromISO(value, { setZone: true })
+      : DateTime.fromJSDate(value, { zone: 'utc' });
+
+  if (!dateTime.isValid) {
+    return null;
+  }
+
+  return dateTime.toUTC().toISO();
+}
