@@ -4,7 +4,12 @@ import { AvailabilityRulesService } from '../availability-rules/availability-rul
 import { GoogleCalendarAvailabilityService } from '../google-calendar/google-calendar-availability.service';
 import { AvailabilityValidationResult } from './availability-validation.types';
 import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
-import { combineLocalDayAndTime, convertToUTC, rangesOverlap } from '../../common/utils/date.utils';
+import {
+  combineLocalDayAndTime,
+  convertToUTC,
+  normalizeInstantToUtcIso,
+  rangesOverlap,
+} from '../../common/utils/date.utils';
 
 @Injectable()
 export class AvailabilitySlotValidationService {
@@ -133,20 +138,30 @@ export class AvailabilitySlotValidationService {
   private overlapsBlackoutWindows(
     rules: Array<{
       rule_type: string;
-      start_time: string | null;
-      end_time: string | null;
+      date_start: string | null;
+      date_end: string | null;
     }>,
     startUtc: DateTime,
     endUtc: DateTime,
   ): boolean {
     const blackoutRules = rules.filter(
-      (rule) => rule.rule_type === 'blackout_window' && rule.start_time && rule.end_time,
+      (rule) => rule.rule_type === 'blackout_window' && rule.date_start && rule.date_end,
     );
-    return blackoutRules.some((rule) =>
-      rangesOverlap(
+    return blackoutRules.some((rule) => {
+      const normalizedStart = normalizeInstantToUtcIso(rule.date_start);
+      const normalizedEnd = normalizeInstantToUtcIso(rule.date_end);
+
+      if (!normalizedStart || !normalizedEnd) {
+        return false;
+      }
+
+      return rangesOverlap(
         { start: startUtc.toISO() as string, end: endUtc.toISO() as string },
-        { start: rule.start_time as string, end: rule.end_time as string },
-      ),
-    );
+        {
+          start: normalizedStart as string,
+          end: normalizedEnd as string,
+        },
+      );
+    });
   }
 }

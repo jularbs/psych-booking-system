@@ -122,15 +122,10 @@ describe('AvailabilitySlotValidationService', () => {
         id: 'rule-1',
         user_id: userId,
         rule_type: 'blackout_window',
-        start_time: DateTime.fromISO('2024-06-10T10:30:00', { zone: timeZone }).toUTC().toISO(),
-        end_time: DateTime.fromISO('2024-06-10T11:00:00', { zone: timeZone }).toUTC().toISO(),
+        date_start: DateTime.fromISO('2024-06-10T10:30:00', { zone: timeZone }).toUTC().toISO(),
+        date_end: DateTime.fromISO('2024-06-10T11:00:00', { zone: timeZone }).toUTC().toISO(),
       },
     ]);
-
-    console.log(
-      'TIME: ',
-      DateTime.fromISO('2024-06-10T10:30:00', { zone: timeZone }).toUTC().toISO(),
-    );
 
     googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
       calendar_id: 'primary',
