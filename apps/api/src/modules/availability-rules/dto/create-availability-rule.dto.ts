@@ -35,6 +35,10 @@ export class CreateAvailabilityRuleDto {
   end_time?: string;
 
   @IsOptional()
+  @IsString()
+  time_zone?: string;
+
+  @IsOptional()
   @IsISO8601()
   date_start?: string;
 
