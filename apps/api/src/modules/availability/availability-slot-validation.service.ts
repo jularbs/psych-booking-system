@@ -101,37 +101,38 @@ export class AvailabilitySlotValidationService {
       day_of_week: number | null;
       start_time: string | null;
       end_time: string | null;
+      time_zone: string | null;
     }>,
     startUtc: DateTime,
     endUtc: DateTime,
     timeZone: string,
   ): boolean {
-    const startLocal = startUtc.setZone(timeZone);
-    const endLocal = endUtc.setZone(timeZone);
-
-    if (!startLocal.isValid || !endLocal.isValid) {
-      return false;
-    }
-
-    if (startLocal.startOf('day').toISO() !== endLocal.startOf('day').toISO()) {
-      return false;
-    }
-
-    const dayOfWeek = startLocal.weekday;
-
-    const dayRules = rules.filter(
+    const weeklyRules = rules.filter(
       (rule) =>
         rule.rule_type === 'weekly_window' &&
-        rule.day_of_week === dayOfWeek &&
-        rule.start_time &&
-        rule.end_time,
+        rule.day_of_week !== null &&
+        rule.start_time !== null &&
+        rule.end_time !== null,
     );
 
-    return dayRules.some((rule) => {
-      const windowStart = combineLocalDayAndTime(startLocal, rule.start_time as string);
-      const windowEnd = combineLocalDayAndTime(startLocal, rule.end_time as string);
+    return weeklyRules.some((rule) => {
+      const ruleTimeZone = rule.time_zone || timeZone;
 
-      return startLocal >= windowStart && endLocal <= windowEnd;
+      const startLocal = startUtc.setZone(ruleTimeZone);
+      const endLocal = endUtc.setZone(ruleTimeZone);
+
+      if (startLocal.startOf('day').toISO() !== endLocal.startOf('day').toISO()) {
+        return false; // The slot spans multiple days, which is not allowed
+      }
+
+      if (startLocal.weekday !== rule.day_of_week) {
+        return false; // The slot does not fall on the correct day of the week
+      }
+
+      const ruleStartLocal = combineLocalDayAndTime(startLocal, rule.start_time as string);
+      const ruleEndLocal = combineLocalDayAndTime(startLocal, rule.end_time as string);
+
+      return startLocal >= ruleStartLocal && endLocal <= ruleEndLocal;
     });
   }
 
