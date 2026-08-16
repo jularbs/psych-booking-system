@@ -74,42 +74,43 @@ export class AvailabilitySlotGenerationService {
       day_of_week: number | null;
       start_time: string | null;
       end_time: string | null;
+      time_zone: string | null;
     }>,
     windowStartUtc: DateTime,
     windowEndUtc: DateTime,
     timeZone: string,
   ): TimeRange[] {
     const windows: TimeRange[] = [];
-    let cursor = windowStartUtc.setZone(timeZone).startOf('day');
-    const endLocal = windowEndUtc.setZone(timeZone);
 
-    while (cursor < endLocal) {
-      const dayRules = rules.filter(
-        (rule) =>
-          rule.rule_type === 'weekly_window' &&
-          rule.day_of_week === cursor.weekday &&
-          rule.start_time !== null &&
-          rule.end_time !== null,
-      );
+    const weeklyRules = rules.filter(
+      (rule) =>
+        rule.rule_type === 'weekly_window' &&
+        rule.day_of_week !== null &&
+        rule.start_time !== null &&
+        rule.end_time !== null,
+    );
 
-      for (const rule of dayRules) {
-        const startLocal = combineLocalDayAndTime(cursor, rule.start_time as string);
-        const endLocal = combineLocalDayAndTime(cursor, rule.end_time as string);
+    for (const rule of weeklyRules) {
+      const ruleTimeZone = rule.time_zone ?? timeZone;
+      let cursor = windowStartUtc.setZone(ruleTimeZone).startOf('day');
+      const endLocal = windowEndUtc.setZone(ruleTimeZone);
 
-        const startUtc = startLocal.toUTC();
-        const endUtc = endLocal.toUTC();
+      while (cursor < endLocal) {
+        if (cursor.weekday === rule.day_of_week) {
+          const startLocal = combineLocalDayAndTime(cursor, rule.start_time as string);
+          const endLocalRule = combineLocalDayAndTime(cursor, rule.end_time as string);
 
-        if (endUtc > windowStartUtc && startUtc < windowEndUtc) {
+          const startUtc = startLocal.toUTC();
+          const endUtc = endLocalRule.toUTC();
+
           windows.push({
             start: DateTime.max(startUtc, windowStartUtc).toISO() as string,
             end: DateTime.min(endUtc, windowEndUtc).toISO() as string,
           });
         }
+        cursor = cursor.plus({ days: 1 }).startOf('day');
       }
-
-      cursor = cursor.plus({ days: 1 }).startOf('day');
     }
-
     return this.mergeRanges(windows);
   }
 
