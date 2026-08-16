@@ -70,6 +70,7 @@ export interface AvailabilityRulesTable {
   day_of_week: number | null;
   start_time: string | null;
   end_time: string | null;
+  time_zone: string | null;
   date_start: string | null;
   date_end: string | null;
   is_active: boolean;
