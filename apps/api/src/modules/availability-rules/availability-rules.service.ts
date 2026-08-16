@@ -3,6 +3,7 @@ import { AvailabilityRulesRepository } from './availability-rules.repository';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
 import { UpdateAvailabilityRuleDto } from './dto/update-availability-rule.dto';
 import { UserRole } from '../../database/database.types';
+import { DEFAULT_SCHEDULING_TIMEZONE } from '../availability/availability.constants';
 
 @Injectable()
 export class AvailabilityRulesService {
@@ -41,18 +42,20 @@ export class AvailabilityRulesService {
   }
 
   async create(user_id: string, params: CreateAvailabilityRuleDto) {
-    this.validateRuleShape(params);
+    const normalizedParams = this.normalizeRuleParams(params);
+    this.validateRuleShape(normalizedParams);
 
     return this.availabilityRulesRepository.create({
       user_id: user_id,
-      rule_type: params.rule_type,
-      description: params.description ?? null,
-      day_of_week: params.day_of_week ?? null,
-      start_time: params.start_time ?? null,
-      end_time: params.end_time ?? null,
-      date_start: params.date_start ?? null,
-      date_end: params.date_end ?? null,
-      is_active: params.is_active ?? true,
+      rule_type: normalizedParams.rule_type as 'weekly_window' | 'blackout_window',
+      description: normalizedParams.description ?? null,
+      day_of_week: normalizedParams.day_of_week ?? null,
+      start_time: normalizedParams.start_time ?? null,
+      time_zone: normalizedParams.time_zone ?? null,
+      end_time: normalizedParams.end_time ?? null,
+      date_start: normalizedParams.date_start ?? null,
+      date_end: normalizedParams.date_end ?? null,
+      is_active: normalizedParams.is_active ?? true,
     });
   }
 
@@ -65,9 +68,10 @@ export class AvailabilityRulesService {
 
     if (!existing) throw new NotFoundException('Availability rule not found');
 
-    this.validateRuleShape(params);
+    const normalizedParams = this.normalizeRuleParams(params);
+    this.validateRuleShape(normalizedParams);
 
-    await this.availabilityRulesRepository.update(id, params);
+    await this.availabilityRulesRepository.update(id, normalizedParams);
 
     return this.getByIdForActor(id, actor);
   }
@@ -77,15 +81,39 @@ export class AvailabilityRulesService {
     return rules.filter((rule) => rule.is_active);
   }
 
+  private normalizeRuleParams(
+    params: CreateAvailabilityRuleDto | UpdateAvailabilityRuleDto,
+  ): CreateAvailabilityRuleDto | UpdateAvailabilityRuleDto {
+    if (params.rule_type === 'weekly_window') {
+      return {
+        ...params,
+        time_zone: params.time_zone ?? DEFAULT_SCHEDULING_TIMEZONE,
+        date_start: null,
+        date_end: null,
+      };
+    } else if (params.rule_type === 'blackout_window') {
+      return {
+        ...params,
+        day_of_week: null,
+        start_time: null,
+        end_time: null,
+        time_zone: null,
+      };
+    }
+
+    return params;
+  }
+
   private validateRuleShape(params: CreateAvailabilityRuleDto | UpdateAvailabilityRuleDto) {
     if (params.rule_type === 'weekly_window') {
       if (
         params.day_of_week === undefined ||
         params.start_time === undefined ||
-        params.end_time === undefined
+        params.end_time === undefined ||
+        params.time_zone === undefined
       ) {
         throw new BadRequestException(
-          'Weekly window rules require day_of_week, start_time, and end_time',
+          'Weekly window rules require day_of_week, start_time, end_time, and time_zone',
         );
       }
     } else if (params.rule_type === 'blackout_window') {
