@@ -3,6 +3,7 @@ import { AvailabilitySlotGenerationService } from './availability-slot-generatio
 import { AvailabilityRulesService } from '../availability-rules/availability-rules.service';
 import { GoogleCalendarAvailabilityService } from '../google-calendar/google-calendar-availability.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DateTime } from 'luxon';
 
 describe('AvailabilitySlotGenerationService', () => {
   let service: AvailabilitySlotGenerationService;
@@ -34,7 +35,7 @@ describe('AvailabilitySlotGenerationService', () => {
     service = module.get<AvailabilitySlotGenerationService>(AvailabilitySlotGenerationService);
   });
 
-  it('uses Asia/Manila as default timezone and returns UTC slots', async () => {
+  it('query slots in Asia/Manila timezone and returns UTC slots', async () => {
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
       {
         rule_type: 'weekly_window',
@@ -49,38 +50,45 @@ describe('AvailabilitySlotGenerationService', () => {
 
     googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
       calendar_id: 'primary',
-      busy_times: [{ start: '2026-08-10T02:00:00.000Z', end: '2026-08-10T02:30:00.000Z' }],
+      busy_times: [
+        {
+          start: DateTime.fromISO('2026-08-10T10:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+          end: DateTime.fromISO('2026-08-10T10:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        },
+      ],
     });
+
+    const timeMin = DateTime.fromISO('2026-08-10T00:00', { zone: 'Asia/Manila' }).toISO();
+    const timeMax = DateTime.fromISO('2026-08-11T00:00', { zone: 'Asia/Manila' }).toISO();
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2026-08-09T16:00:00.000Z',
-      time_max: '2026-08-10T16:00:00.000Z',
+      time_min: timeMin as string,
+      time_max: timeMax as string,
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
 
-    expect(result.time_zone).toBe('Asia/Manila');
     expect(result.slots).toEqual([
       {
-        start: '2026-08-10T01:00:00.000Z',
-        end: '2026-08-10T01:30:00.000Z',
+        start: DateTime.fromISO('2026-08-10T09:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T09:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
       {
-        start: '2026-08-10T01:30:00.000Z',
-        end: '2026-08-10T02:00:00.000Z',
+        start: DateTime.fromISO('2026-08-10T09:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T10:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
       {
-        start: '2026-08-10T02:30:00.000Z',
-        end: '2026-08-10T03:00:00.000Z',
+        start: DateTime.fromISO('2026-08-10T10:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T11:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
       {
-        start: '2026-08-10T03:00:00.000Z',
-        end: '2026-08-10T03:30:00.000Z',
+        start: DateTime.fromISO('2026-08-10T11:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T11:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
       {
-        start: '2026-08-10T03:30:00.000Z',
-        end: '2026-08-10T04:00:00.000Z',
+        start: DateTime.fromISO('2026-08-10T11:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T12:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
     ]);
   });
@@ -99,8 +107,8 @@ describe('AvailabilitySlotGenerationService', () => {
         day_of_week: null,
         start_time: null,
         end_time: null,
-        date_start: '2026-08-10T01:30:00.000Z',
-        date_end: '2026-08-10T02:30:00.000Z',
+        date_start: DateTime.fromISO('2026-08-10T10:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        date_end: DateTime.fromISO('2026-08-10T12:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
         time_zone: 'Asia/Manila',
       },
     ]);
@@ -112,130 +120,30 @@ describe('AvailabilitySlotGenerationService', () => {
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2026-08-09T16:00:00.000Z',
-      time_max: '2026-08-10T16:00:00.000Z',
+      time_min: DateTime.fromISO('2026-08-10T00:00', { zone: 'Asia/Manila' }).toISO() as string,
+      time_max: DateTime.fromISO('2026-08-11T00:00', { zone: 'Asia/Manila' }).toISO() as string,
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
 
     expect(result.slots).toEqual([
       {
-        start: '2026-08-10T01:00:00.000Z',
-        end: '2026-08-10T01:30:00.000Z',
+        start: DateTime.fromISO('2026-08-10T09:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T09:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
       {
-        start: '2026-08-10T02:30:00.000Z',
-        end: '2026-08-10T03:00:00.000Z',
-      },
-      {
-        start: '2026-08-10T03:00:00.000Z',
-        end: '2026-08-10T03:30:00.000Z',
-      },
-      {
-        start: '2026-08-10T03:30:00.000Z',
-        end: '2026-08-10T04:00:00.000Z',
+        start: DateTime.fromISO('2026-08-10T09:30', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        end: DateTime.fromISO('2026-08-10T10:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
     ]);
   });
 
-  it('blocks correct slots when request timezone is Asia/Manila and blackout is UTC', async () => {
-    availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
-      {
-        rule_type: 'weekly_window',
-        day_of_week: 1,
-        start_time: '09:00',
-        end_time: '12:00',
-      },
-      {
-        rule_type: 'blackout_window',
-        date_start: '2026-08-10T01:30:00.000Z',
-        date_end: '2026-08-10T02:30:00.000Z',
-      },
-    ]);
-
-    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
-      calendar_id: 'primary',
-      busy_times: [],
-    });
-
-    const result = await service.querySlots({
-      user_id: 'user-1',
-      time_min: '2026-08-09T16:00:00.000Z',
-      time_max: '2026-08-10T16:00:00.000Z',
-      time_zone: 'Asia/Manila',
-      slot_duration_minutes: 30,
-      slot_interval_minutes: 30,
-    });
-
-    expect(result.time_zone).toBe('Asia/Manila');
-    expect(result.slots).toEqual([
-      {
-        start: '2026-08-10T01:00:00.000Z',
-        end: '2026-08-10T01:30:00.000Z',
-      },
-      {
-        start: '2026-08-10T02:30:00.000Z',
-        end: '2026-08-10T03:00:00.000Z',
-      },
-      {
-        start: '2026-08-10T03:00:00.000Z',
-        end: '2026-08-10T03:30:00.000Z',
-      },
-      {
-        start: '2026-08-10T03:30:00.000Z',
-        end: '2026-08-10T04:00:00.000Z',
-      },
-    ]);
-  });
-
-  it('interprets timezone-naive query bounds using request time_zone', async () => {
-    availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
-      {
-        rule_type: 'weekly_window',
-        day_of_week: 1,
-        start_time: '09:00',
-        end_time: '12:00',
-      },
-    ]);
-
-    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
-      calendar_id: 'primary',
-      busy_times: [],
-    });
-
-    const result = await service.querySlots({
-      user_id: 'user-1',
-      time_min: '2026-08-10T08:30:00.000',
-      time_max: '2026-08-10T10:30:00.000',
-      time_zone: 'Asia/Manila',
-      slot_duration_minutes: 30,
-      slot_interval_minutes: 30,
-    });
-
-    expect(result.time_zone).toBe('Asia/Manila');
-    expect(result.slots).toEqual([
-      {
-        start: '2026-08-10T01:00:00.000Z',
-        end: '2026-08-10T01:30:00.000Z',
-      },
-      {
-        start: '2026-08-10T01:30:00.000Z',
-        end: '2026-08-10T02:00:00.000Z',
-      },
-      {
-        start: '2026-08-10T02:00:00.000Z',
-        end: '2026-08-10T02:30:00.000Z',
-      },
-    ]);
-  });
-
-  it('throws if invalid time range is provided', async () => {
+  it('throws if invalid time_min and time_max is provided', async () => {
     await expect(
       service.querySlots({
         user_id: 'user-1',
         time_min: '2024-06-04T00:00:00Z',
-        time_max: '2024-06-03T00:00:00Z', // Invalid range
-        time_zone: 'UTC',
+        time_max: '2024-06-03T00:00:00Z',
         slot_duration_minutes: 30,
         slot_interval_minutes: 30,
       }),
@@ -246,7 +154,6 @@ describe('AvailabilitySlotGenerationService', () => {
         user_id: 'user-1',
         time_min: 'invalid-date',
         time_max: '2024-06-03T00:00:00Z', // Invalid date
-        time_zone: 'UTC',
         slot_duration_minutes: 30,
         slot_interval_minutes: 30,
       }),
@@ -257,7 +164,16 @@ describe('AvailabilitySlotGenerationService', () => {
         user_id: 'user-1',
         time_min: '2024-06-03T00:00:00Z',
         time_max: 'invalid-date', // Invalid date
-        time_zone: 'UTC',
+        slot_duration_minutes: 30,
+        slot_interval_minutes: 30,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.querySlots({
+        user_id: 'user-1',
+        time_min: '2024-06-03T00:00',
+        time_max: '2024-06-04T00:00',
         slot_duration_minutes: 30,
         slot_interval_minutes: 30,
       }),
@@ -266,12 +182,15 @@ describe('AvailabilitySlotGenerationService', () => {
 
   it('returns empty slots if no availability rules are found', async () => {
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([]);
+    googleCalendarAvailabilityService.queryMyAvailability.mockResolvedValue({
+      calendar_id: 'primary',
+      busy_times: [],
+    });
 
     const result = await service.querySlots({
       user_id: 'user-1',
       time_min: '2024-06-03T00:00:00Z',
       time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
@@ -279,7 +198,7 @@ describe('AvailabilitySlotGenerationService', () => {
     expect(result.slots).toEqual([]);
   });
 
-  it('returns empty slots if all time is blocked by busy times with timezone handling', async () => {
+  it('returns empty slots if all time is blocked by busy times', async () => {
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
       {
         rule_type: 'weekly_window',
@@ -294,17 +213,20 @@ describe('AvailabilitySlotGenerationService', () => {
       calendar_id: 'primary',
       busy_times: [
         {
-          start: '2026-08-10T01:00:00.000Z', // 09:00 Asia/Manila
-          end: '2026-08-10T04:00:00.000Z', // 12:00 Asia/Manila
+          start: DateTime.fromISO('2026-08-10T09:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+          end: DateTime.fromISO('2026-08-10T12:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
         },
       ],
     });
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2026-08-09T16:00:00.000Z',
-      time_max: '2026-08-10T16:00:00.000Z',
-      time_zone: 'Asia/Manila',
+      time_min: DateTime.fromISO('2026-08-10T09:00', { zone: 'Asia/Manila' })
+        .toUTC()
+        .toISO() as string,
+      time_max: DateTime.fromISO('2026-08-10T12:00', { zone: 'Asia/Manila' })
+        .toUTC()
+        .toISO() as string,
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
@@ -323,8 +245,8 @@ describe('AvailabilitySlotGenerationService', () => {
       },
       {
         rule_type: 'blackout_window',
-        date_start: '2026-08-10T01:00:00.000Z',
-        date_end: '2026-08-10T04:00:00.000Z',
+        date_start: DateTime.fromISO('2026-08-10T00:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+        date_end: DateTime.fromISO('2026-08-11T00:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
       },
     ]);
 
@@ -335,9 +257,12 @@ describe('AvailabilitySlotGenerationService', () => {
 
     const result = await service.querySlots({
       user_id: 'user-1',
-      time_min: '2026-08-09T16:00:00.000Z',
-      time_max: '2026-08-10T16:00:00.000Z',
-      time_zone: 'Asia/Manila',
+      time_min: DateTime.fromISO('2026-08-10T08:00', { zone: 'Asia/Manila' })
+        .toUTC()
+        .toISO() as string,
+      time_max: DateTime.fromISO('2026-08-10T17:00', { zone: 'Asia/Manila' })
+        .toUTC()
+        .toISO() as string,
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     });
@@ -364,7 +289,6 @@ describe('AvailabilitySlotGenerationService', () => {
         user_id: 'user-1',
         time_min: '2024-06-03T00:00:00Z',
         time_max: '2024-06-04T00:00:00Z',
-        time_zone: 'UTC',
         slot_duration_minutes: 30,
         slot_interval_minutes: 30,
       }),

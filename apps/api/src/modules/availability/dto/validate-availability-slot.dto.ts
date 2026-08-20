@@ -1,4 +1,4 @@
-import { IsISO8601, IsOptional, IsString } from 'class-validator';
+import { IsISO8601 } from 'class-validator';
 
 export class ValidateAvailabilitySlotDto {
   @IsISO8601()
@@ -6,8 +6,4 @@ export class ValidateAvailabilitySlotDto {
 
   @IsISO8601()
   end!: string;
-
-  @IsOptional()
-  @IsString()
-  timezone?: string;
 }

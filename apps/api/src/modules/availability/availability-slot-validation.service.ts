@@ -3,10 +3,9 @@ import { DateTime } from 'luxon';
 import { AvailabilityRulesService } from '../availability-rules/availability-rules.service';
 import { GoogleCalendarAvailabilityService } from '../google-calendar/google-calendar-availability.service';
 import { AvailabilityValidationResult } from './availability-validation.types';
-import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
 import {
   combineLocalDayAndTime,
-  convertToUTC,
+  isValidIsoWithOffset,
   normalizeInstantToUtcIso,
   rangesOverlap,
 } from '../../common/utils/date.utils';
@@ -22,19 +21,15 @@ export class AvailabilitySlotValidationService {
     user_id: string,
     start_time: string,
     end_time: string,
-    time_zone?: string,
   ): Promise<AvailabilityValidationResult> {
-    const timezone = time_zone || DEFAULT_SCHEDULING_TIMEZONE;
-
-    if (!DateTime.now().setZone(timezone).isValid) {
+    if (!isValidIsoWithOffset(start_time) || !isValidIsoWithOffset(end_time)) {
       return {
         isValid: false,
-        reason: 'invalid_time_zone',
+        reason: 'invalid_time_format',
       };
     }
-
-    const startTimeUtc = convertToUTC(start_time, timezone);
-    const endTimeUtc = convertToUTC(end_time, timezone);
+    const startTimeUtc = DateTime.fromISO(start_time).toUTC();
+    const endTimeUtc = DateTime.fromISO(end_time).toUTC();
 
     if (!startTimeUtc.isValid || !endTimeUtc.isValid || startTimeUtc >= endTimeUtc) {
       return {
@@ -49,7 +44,6 @@ export class AvailabilitySlotValidationService {
       rules,
       startTimeUtc,
       endTimeUtc,
-      timezone,
     );
 
     if (!isInsideWeeklyWindow) {
@@ -72,7 +66,6 @@ export class AvailabilitySlotValidationService {
       user_id,
       time_min: startTimeUtc.toISO() as string,
       time_max: endTimeUtc.toISO() as string,
-      time_zone: timezone,
     });
 
     const overlapsBusy = busyResponse.busy_times.some((busy) =>
@@ -101,37 +94,38 @@ export class AvailabilitySlotValidationService {
       day_of_week: number | null;
       start_time: string | null;
       end_time: string | null;
+      time_zone: string | null;
     }>,
     startUtc: DateTime,
     endUtc: DateTime,
-    timeZone: string,
   ): boolean {
-    const startLocal = startUtc.setZone(timeZone);
-    const endLocal = endUtc.setZone(timeZone);
-
-    if (!startLocal.isValid || !endLocal.isValid) {
-      return false;
-    }
-
-    if (startLocal.startOf('day').toISO() !== endLocal.startOf('day').toISO()) {
-      return false;
-    }
-
-    const dayOfWeek = startLocal.weekday;
-
-    const dayRules = rules.filter(
+    const weeklyRules = rules.filter(
       (rule) =>
         rule.rule_type === 'weekly_window' &&
-        rule.day_of_week === dayOfWeek &&
-        rule.start_time &&
-        rule.end_time,
+        rule.day_of_week !== null &&
+        rule.start_time !== null &&
+        rule.end_time !== null &&
+        rule.time_zone !== null,
     );
 
-    return dayRules.some((rule) => {
-      const windowStart = combineLocalDayAndTime(startLocal, rule.start_time as string);
-      const windowEnd = combineLocalDayAndTime(startLocal, rule.end_time as string);
+    return weeklyRules.some((rule) => {
+      const ruleTimeZone = rule.time_zone as string;
 
-      return startLocal >= windowStart && endLocal <= windowEnd;
+      const startLocal = startUtc.setZone(ruleTimeZone);
+      const endLocal = endUtc.setZone(ruleTimeZone);
+
+      if (startLocal.startOf('day').toISO() !== endLocal.startOf('day').toISO()) {
+        return false; // The slot spans multiple days, which is not allowed
+      }
+
+      if (startLocal.weekday !== rule.day_of_week) {
+        return false; // The slot does not fall on the correct day of the week
+      }
+
+      const ruleStartLocal = combineLocalDayAndTime(startLocal, rule.start_time as string);
+      const ruleEndLocal = combineLocalDayAndTime(startLocal, rule.end_time as string);
+
+      return startLocal >= ruleStartLocal && endLocal <= ruleEndLocal;
     });
   }
 

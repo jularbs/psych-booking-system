@@ -32,11 +32,6 @@ export class AvailabilityController {
       throw new UnauthorizedException('User ID is missing from the request context.');
     }
 
-    return this.availabilitySlotValidationService.validateSlot(
-      userId,
-      dto.start,
-      dto.end,
-      dto.timezone,
-    );
+    return this.availabilitySlotValidationService.validateSlot(userId, dto.start, dto.end);
   }
 }

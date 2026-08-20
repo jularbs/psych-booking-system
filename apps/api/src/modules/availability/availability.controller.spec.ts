@@ -44,7 +44,6 @@ describe('AvailabilityController', () => {
     const dto = {
       time_min: '2024-06-03T00:00:00Z',
       time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     };
@@ -64,7 +63,6 @@ describe('AvailabilityController', () => {
     const result = await controller.validateSlot('user-1', {
       start: '2024-06-03T09:00:00Z',
       end: '2024-06-03T09:30:00Z',
-      timezone: 'Asia/Manila',
     });
     expect(result).toEqual({ isValid: true, reason: null });
   });
@@ -73,7 +71,6 @@ describe('AvailabilityController', () => {
     const dto = {
       time_min: '2024-06-03T00:00:00Z',
       time_max: '2024-06-04T00:00:00Z',
-      time_zone: 'UTC',
       slot_duration_minutes: 30,
       slot_interval_minutes: 30,
     };
@@ -87,7 +84,6 @@ describe('AvailabilityController', () => {
     const dto = {
       start: '2024-06-03T09:00:00Z',
       end: '2024-06-03T09:30:00Z',
-      timezone: 'Asia/Manila',
     };
 
     expect(() => controller.validateSlot(null as unknown as string, dto)).toThrow(

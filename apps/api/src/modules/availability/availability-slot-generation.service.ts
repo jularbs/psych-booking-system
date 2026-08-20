@@ -4,8 +4,7 @@ import { AvailabilityRulesService } from '../availability-rules/availability-rul
 import { TimeRange, GeneratedAvailabilitySlot } from './availability-slot.types';
 import { QueryAvailabilitySlotsDto } from './dto/query-availability-slots.dto';
 import { DateTime } from 'luxon';
-import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
-import { combineLocalDayAndTime, convertToUTC } from '../../common/utils/date.utils';
+import { combineLocalDayAndTime, isValidIsoWithOffset } from '../../common/utils/date.utils';
 @Injectable()
 export class AvailabilitySlotGenerationService {
   constructor(
@@ -15,18 +14,17 @@ export class AvailabilitySlotGenerationService {
 
   async querySlots(
     params: QueryAvailabilitySlotsDto & { user_id: string },
-  ): Promise<{ slots: GeneratedAvailabilitySlot[]; time_zone: string }> {
-    const timeZone = params.time_zone ?? DEFAULT_SCHEDULING_TIMEZONE;
-
-    if (!DateTime.now().setZone(timeZone).isValid) {
-      throw new BadRequestException('Invalid time zone');
+  ): Promise<{ slots: GeneratedAvailabilitySlot[] }> {
+    if (!isValidIsoWithOffset(params.time_min) || !isValidIsoWithOffset(params.time_max)) {
+      throw new BadRequestException(
+        'time_min or time_max should be ISO8601 format with proper offset.',
+      );
     }
-
-    const windowStartUtc = convertToUTC(params.time_min, timeZone);
-    const windowEndUtc = convertToUTC(params.time_max, timeZone);
+    const windowStartUtc = DateTime.fromISO(params.time_min).toUTC();
+    const windowEndUtc = DateTime.fromISO(params.time_max).toUTC();
 
     if (!windowStartUtc.isValid || !windowEndUtc.isValid) {
-      throw new BadRequestException('Invalid time range');
+      throw new BadRequestException('time_min or time_max is not valid.');
     }
 
     if (windowStartUtc >= windowEndUtc) {
@@ -35,19 +33,13 @@ export class AvailabilitySlotGenerationService {
 
     const rules = await this.availabilityRulesService.listActiveRulesForUser(params.user_id);
 
-    const availabilityWindows = this.buildAvailabilityWindows(
-      rules,
-      windowStartUtc,
-      windowEndUtc,
-      timeZone,
-    );
+    const availabilityWindows = this.buildAvailabilityWindows(rules, windowStartUtc, windowEndUtc);
     const blackoutWindows = this.buildBlackoutWindows(rules, windowStartUtc, windowEndUtc);
 
     const busyResponse = await this.googleCalendarAvailabilityService.queryMyAvailability({
       user_id: params.user_id,
       time_min: params.time_min,
       time_max: params.time_max,
-      time_zone: timeZone,
     });
 
     const busyWindows = busyResponse.busy_times.map((busy) => ({
@@ -65,7 +57,7 @@ export class AvailabilitySlotGenerationService {
       params.slot_interval_minutes,
     );
 
-    return { slots, time_zone: timeZone };
+    return { slots };
   }
 
   private buildAvailabilityWindows(
@@ -74,42 +66,42 @@ export class AvailabilitySlotGenerationService {
       day_of_week: number | null;
       start_time: string | null;
       end_time: string | null;
+      time_zone: string | null;
     }>,
     windowStartUtc: DateTime,
     windowEndUtc: DateTime,
-    timeZone: string,
   ): TimeRange[] {
     const windows: TimeRange[] = [];
-    let cursor = windowStartUtc.setZone(timeZone).startOf('day');
-    const endLocal = windowEndUtc.setZone(timeZone);
 
-    while (cursor < endLocal) {
-      const dayRules = rules.filter(
-        (rule) =>
-          rule.rule_type === 'weekly_window' &&
-          rule.day_of_week === cursor.weekday &&
-          rule.start_time !== null &&
-          rule.end_time !== null,
-      );
+    const weeklyRules = rules.filter(
+      (rule) =>
+        rule.rule_type === 'weekly_window' &&
+        rule.day_of_week !== null &&
+        rule.start_time !== null &&
+        rule.end_time !== null,
+    );
 
-      for (const rule of dayRules) {
-        const startLocal = combineLocalDayAndTime(cursor, rule.start_time as string);
-        const endLocal = combineLocalDayAndTime(cursor, rule.end_time as string);
+    for (const rule of weeklyRules) {
+      const ruleTimeZone = rule.time_zone;
+      let cursor = windowStartUtc.setZone(ruleTimeZone as string).startOf('day');
+      const endLocal = windowEndUtc.setZone(ruleTimeZone as string);
 
-        const startUtc = startLocal.toUTC();
-        const endUtc = endLocal.toUTC();
+      while (cursor < endLocal) {
+        if (cursor.weekday === rule.day_of_week) {
+          const startLocal = combineLocalDayAndTime(cursor, rule.start_time as string);
+          const endLocalRule = combineLocalDayAndTime(cursor, rule.end_time as string);
 
-        if (endUtc > windowStartUtc && startUtc < windowEndUtc) {
+          const startUtc = startLocal.toUTC();
+          const endUtc = endLocalRule.toUTC();
+
           windows.push({
             start: DateTime.max(startUtc, windowStartUtc).toISO() as string,
             end: DateTime.min(endUtc, windowEndUtc).toISO() as string,
           });
         }
+        cursor = cursor.plus({ days: 1 }).startOf('day');
       }
-
-      cursor = cursor.plus({ days: 1 }).startOf('day');
     }
-
     return this.mergeRanges(windows);
   }
 
