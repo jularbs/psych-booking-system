@@ -12,6 +12,7 @@ import { ServicesModule } from '../modules/services/services.module';
 import { GoogleCalendarModule } from '../modules/google-calendar/google-calendar.module';
 import { AvailabilityRulesModule } from '../modules/availability-rules/availability-rules.module';
 import { AvailabilityModule } from '../modules/availability/availability.module';
+import { BookingsModule } from '../modules/bookings/bookings.module';
 @Module({
   imports: [
     ConfigurationModule,
@@ -24,6 +25,7 @@ import { AvailabilityModule } from '../modules/availability/availability.module'
     GoogleCalendarModule,
     AvailabilityRulesModule,
     AvailabilityModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

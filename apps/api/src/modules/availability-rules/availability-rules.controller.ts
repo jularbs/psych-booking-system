@@ -15,7 +15,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { AvailabilityRulesService } from './availability-rules.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
-import { UserRole } from '../../database/database.types';
+import { type UserRole } from '../../database/database.types';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('PLATFORM_ADMIN', 'PSYCHOLOGIST', 'ASSISTANT')
