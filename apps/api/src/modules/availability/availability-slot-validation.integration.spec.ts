@@ -88,6 +88,7 @@ describe('Availability Slot Validation Integration', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '12:00:00',
+        time_zone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -97,7 +98,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T09:00:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T10:00:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -163,6 +163,7 @@ describe('Availability Slot Validation Integration', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '12:00:00',
+        time_zone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -172,7 +173,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T09:30:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T10:30:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -238,6 +238,7 @@ describe('Availability Slot Validation Integration', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '12:00:00',
+        time_zone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -247,7 +248,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T08:00:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T09:00:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -313,6 +313,7 @@ describe('Availability Slot Validation Integration', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '17:00:00',
+        time_zone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -332,7 +333,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T13:00:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T14:00:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(201);
 
@@ -348,7 +348,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T09:00:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T10:00:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(401);
   });
@@ -366,7 +365,6 @@ describe('Availability Slot Validation Integration', () => {
       .send({
         start: DateTime.fromISO('2026-08-10T09:00:00', { zone: 'Asia/Manila' }).toISO(),
         end: DateTime.fromISO('2026-08-10T10:00:00', { zone: 'Asia/Manila' }).toISO(),
-        timezone: 'Asia/Manila',
       })
       .expect(403);
   });
