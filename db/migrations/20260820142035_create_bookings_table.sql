@@ -9,7 +9,7 @@ CREATE TABLE
         starts_at TIMESTAMPTZ NOT NULL,
         ends_at TIMESTAMPTZ NOT NULL,
         time_zone TEXT NOT NULL,
-        status TEXT NOT,
+        status TEXT NOT NULL,
         google_calendar_event_id TEXT,
         notes TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now (),
