@@ -151,7 +151,6 @@ describe('AvailabilitySlotValidationService', () => {
     const endTime = DateTime.fromISO('2024-06-10T11:00:00', {
       zone: 'Asia/Manila',
     }).toISO() as string;
-    const timeZone = 'Asia/Manila';
 
     availabilityRulesService.listActiveRulesForUser.mockResolvedValue([
       {
@@ -161,6 +160,7 @@ describe('AvailabilitySlotValidationService', () => {
         day_of_week: 1, // Monday
         start_time: '09:00',
         end_time: '17:00',
+        time_zone: 'Asia/Manila',
       },
     ]);
 
@@ -168,8 +168,8 @@ describe('AvailabilitySlotValidationService', () => {
       calendar_id: 'primary',
       busy_times: [
         {
-          start: DateTime.fromISO('2024-06-10T10:30:00', { zone: timeZone }).toUTC().toISO(),
-          end: DateTime.fromISO('2024-06-10T11:30:00', { zone: timeZone }).toUTC().toISO(),
+          start: DateTime.fromISO('2024-06-10T10:30:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+          end: DateTime.fromISO('2024-06-10T11:30:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
         },
       ],
     });
