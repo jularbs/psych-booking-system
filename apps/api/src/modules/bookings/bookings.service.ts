@@ -3,6 +3,7 @@ import { BookingsRepository } from './bookings.repository';
 import { AvailabilitySlotValidationService } from '../availability/availability-slot-validation.service';
 import { ServicesService } from '../services/services.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { isValidIsoWithOffset } from '../../common/utils/date.utils';
 
 @Injectable()
 export class BookingsService {
@@ -27,6 +28,14 @@ export class BookingsService {
   }
 
   async create(params: CreateBookingDto & { user_id: string }) {
+    if (!isValidIsoWithOffset(params.starts_at) || !isValidIsoWithOffset(params.ends_at)) {
+      throw new BadRequestException('Invalid start or end time format');
+    }
+
+    if (params.ends_at <= params.starts_at) {
+      throw new BadRequestException('End time must be after start time');
+    }
+
     const service = await this.servicesService.getById(params.service_id);
 
     if (!service || !service.is_active) {
