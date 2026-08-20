@@ -65,7 +65,7 @@ describe('BookingsService', () => {
   });
 
   it('creates a new booking', async () => {
-    const params = {
+    const params: CreateBookingDto & { user_id: string } = {
       user_id: 'user-1',
       service_id: 'service-1',
       customer_name: 'John Doe',
@@ -90,6 +90,8 @@ describe('BookingsService', () => {
     expect(bookingsRepository.create).toHaveBeenCalledWith({
       ...params,
       status: 'pending',
+      google_calendar_event_id: null,
+      notes: params.notes ?? null,
     });
 
     expect(result).toEqual({ id: 'booking-1', ...params });
