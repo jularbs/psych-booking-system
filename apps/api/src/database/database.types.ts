@@ -18,6 +18,10 @@ export const AVAILABILITY_RULE_TYPES = ['weekly_window', 'blackout_window'] as c
 
 export type AvailabilityRuleType = (typeof AVAILABILITY_RULE_TYPES)[number];
 
+export const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'] as const;
+
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
 export interface UsersTable {
   id: string;
   email: string;
@@ -62,6 +66,22 @@ export interface GoogleCalendarConnectionsTable {
   updated_at: ColumnType<string, never, string>;
 }
 
+export interface BookingsTable {
+  id: GeneratedAlways<string>;
+  user_id: string;
+  service_id: string;
+  customer_name: string;
+  customer_email: string;
+  starts_at: string;
+  ends_at: string;
+  time_zone: string;
+  status: BookingStatus;
+  google_calendar_event_id: string | null;
+  notes: string | null;
+  created_at: GeneratedAlways<string>;
+  updated_at: ColumnType<string, never, string>;
+}
+
 export interface AvailabilityRulesTable {
   id: GeneratedAlways<string>;
   user_id: string;
@@ -82,4 +102,5 @@ export interface Database {
   services: ServicesTable;
   google_calendar_connections: GoogleCalendarConnectionsTable;
   availability_rules: AvailabilityRulesTable;
+  bookings: BookingsTable;
 }
