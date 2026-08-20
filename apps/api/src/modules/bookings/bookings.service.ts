@@ -60,6 +60,8 @@ export class BookingsService {
       ...params,
       status: 'pending',
       time_zone: params.time_zone ?? 'Asia/Manila',
+      google_calendar_event_id: null,
+      notes: params.notes ?? null,
     });
   }
 }
