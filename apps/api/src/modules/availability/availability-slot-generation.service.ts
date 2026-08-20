@@ -35,12 +35,7 @@ export class AvailabilitySlotGenerationService {
 
     const rules = await this.availabilityRulesService.listActiveRulesForUser(params.user_id);
 
-    const availabilityWindows = this.buildAvailabilityWindows(
-      rules,
-      windowStartUtc,
-      windowEndUtc,
-      timeZone,
-    );
+    const availabilityWindows = this.buildAvailabilityWindows(rules, windowStartUtc, windowEndUtc);
     const blackoutWindows = this.buildBlackoutWindows(rules, windowStartUtc, windowEndUtc);
 
     const busyResponse = await this.googleCalendarAvailabilityService.queryMyAvailability({
@@ -78,7 +73,6 @@ export class AvailabilitySlotGenerationService {
     }>,
     windowStartUtc: DateTime,
     windowEndUtc: DateTime,
-    timeZone: string,
   ): TimeRange[] {
     const windows: TimeRange[] = [];
 
@@ -91,9 +85,9 @@ export class AvailabilitySlotGenerationService {
     );
 
     for (const rule of weeklyRules) {
-      const ruleTimeZone = rule.time_zone ?? timeZone;
-      let cursor = windowStartUtc.setZone(ruleTimeZone).startOf('day');
-      const endLocal = windowEndUtc.setZone(ruleTimeZone);
+      const ruleTimeZone = rule.time_zone;
+      let cursor = windowStartUtc.setZone(ruleTimeZone as string).startOf('day');
+      const endLocal = windowEndUtc.setZone(ruleTimeZone as string);
 
       while (cursor < endLocal) {
         if (cursor.weekday === rule.day_of_week) {
