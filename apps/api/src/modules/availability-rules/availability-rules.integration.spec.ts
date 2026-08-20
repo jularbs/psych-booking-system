@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createAuthenticatedUser } from '../../test-utils/auth-test-helpers';
 import { createTestApp, TestAppContext } from '../../test-utils/create-test-app';
 import { resetTestDb } from '../../test-utils/reset-test-db';
+import { DateTime } from 'luxon';
 
 describe('Availability rules integration tests', () => {
   let context: TestAppContext;
@@ -34,6 +35,7 @@ describe('Availability rules integration tests', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '17:00:00',
+        time_zone: 'Asia/Manila',
         is_active: true,
       })
       .expect(201);
@@ -50,11 +52,49 @@ describe('Availability rules integration tests', () => {
       day_of_week: 1,
       start_time: '09:00:00',
       end_time: '17:00:00',
+      time_zone: 'Asia/Manila',
       is_active: true,
     });
   });
 
-  it('creates a new blackout window availability rule for the current user', async () => {
+  it('creates a new weekly window availability rule for the current user with Asia/Manila as default', async () => {
+    const staff = await createAuthenticatedUser(context.app, {
+      email: 'staff@example.com',
+      password: 'Password123!',
+      role: 'PSYCHOLOGIST',
+    });
+
+    await request(context.app.getHttpServer())
+      .post('/availability-rules')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .send({
+        description: 'Weekly availability',
+        rule_type: 'weekly_window',
+        day_of_week: 1,
+        start_time: '09:00:00',
+        end_time: '17:00:00',
+        is_active: true,
+      })
+      .expect(201);
+
+    const response = await request(context.app.getHttpServer())
+      .get('/availability-rules/me')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .expect(200);
+
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0]).toMatchObject({
+      description: 'Weekly availability',
+      rule_type: 'weekly_window',
+      day_of_week: 1,
+      start_time: '09:00:00',
+      end_time: '17:00:00',
+      time_zone: 'Asia/Manila',
+      is_active: true,
+    });
+  });
+
+  it('creates a new blackout window availability rule in Asia/Manila for the current user then store in UTC', async () => {
     const staff = await createAuthenticatedUser(context.app, {
       email: 'staff@example.com',
       password: 'Password123!',
@@ -67,8 +107,8 @@ describe('Availability rules integration tests', () => {
       .send({
         description: 'Blackout period',
         rule_type: 'blackout_window',
-        date_start: '2024-01-01',
-        date_end: '2024-01-07',
+        date_start: DateTime.fromISO('2026-08-10T10:00:00', { zone: 'Asia/Manila' }).toISO(),
+        date_end: DateTime.fromISO('2026-08-10T12:00:00', { zone: 'Asia/Manila' }).toISO(),
         is_active: true,
       })
       .expect(201);
@@ -82,8 +122,42 @@ describe('Availability rules integration tests', () => {
     expect(response.body.data[0]).toMatchObject({
       description: 'Blackout period',
       rule_type: 'blackout_window',
-      date_start: expect.stringMatching(/2024-01-01/),
-      date_end: expect.stringMatching(/2024-01-07/),
+      date_start: DateTime.fromISO('2026-08-10T10:00:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+      date_end: DateTime.fromISO('2026-08-10T12:00:00', { zone: 'Asia/Manila' }).toUTC().toISO(),
+      is_active: true,
+    });
+  });
+
+  it('creates a new blackout window availability in UTC and store in UTC', async () => {
+    const staff = await createAuthenticatedUser(context.app, {
+      email: 'staff@example.com',
+      password: 'Password123!',
+      role: 'PSYCHOLOGIST',
+    });
+
+    await request(context.app.getHttpServer())
+      .post('/availability-rules')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .send({
+        description: 'Blackout period',
+        rule_type: 'blackout_window',
+        date_start: DateTime.fromISO('2026-08-10T10:00:00Z').toISO(),
+        date_end: DateTime.fromISO('2026-08-10T12:00:00Z').toISO(),
+        is_active: true,
+      })
+      .expect(201);
+
+    const response = await request(context.app.getHttpServer())
+      .get('/availability-rules/me')
+      .set('Authorization', `Bearer ${staff.access_token}`)
+      .expect(200);
+
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0]).toMatchObject({
+      description: 'Blackout period',
+      rule_type: 'blackout_window',
+      date_start: DateTime.fromISO('2026-08-10T10:00:00Z').toUTC().toISO(),
+      date_end: DateTime.fromISO('2026-08-10T12:00:00Z').toUTC().toISO(),
       is_active: true,
     });
   });
@@ -104,6 +178,7 @@ describe('Availability rules integration tests', () => {
         day_of_week: 1,
         start_time: '09:00:00',
         end_time: '17:00:00',
+        time_zone: 'Asia/Manila',
         is_active: true,
       })
       .expect(201);
@@ -132,6 +207,7 @@ describe('Availability rules integration tests', () => {
       day_of_week: 1,
       start_time: '10:00:00',
       end_time: '18:00:00',
+      time_zone: 'Asia/Manila',
       is_active: true,
     });
   });
@@ -214,7 +290,7 @@ describe('Availability rules integration tests', () => {
 
     expect(response.body.error).toBeDefined();
     expect(response.body.error.message).toContain(
-      'Weekly window rules require day_of_week, start_time, and end_time',
+      'Weekly window rules require day_of_week, start_time, end_time, and time_zone',
     );
   });
 

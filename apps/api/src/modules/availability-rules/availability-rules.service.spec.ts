@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AvailabilityRulesService } from './availability-rules.service';
 import { AvailabilityRulesRepository } from './availability-rules.repository';
 import { CreateAvailabilityRuleDto } from './dto/create-availability-rule.dto';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserRole } from '../../database/database.types';
 
 describe('AvailabilityRulesService', () => {
@@ -83,7 +83,7 @@ describe('AvailabilityRulesService', () => {
     await expect(service.getById('missing-id')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('creates a weekly window rule', async () => {
+  it('creates a weekly window rule with default timezone', async () => {
     const userId = 'user-1';
     const params: CreateAvailabilityRuleDto = {
       rule_type: 'weekly_window',
@@ -92,7 +92,7 @@ describe('AvailabilityRulesService', () => {
       end_time: '17:00',
     };
 
-    const createdRule = { id: 'rule-1', user_id: userId, ...params };
+    const createdRule = { id: 'rule-1', user_id: userId, ...params, time_zone: 'Asia/Manila' };
     repository.create.mockResolvedValue(createdRule);
 
     const result = await service.create(userId, params);
@@ -101,6 +101,7 @@ describe('AvailabilityRulesService', () => {
     expect(repository.create).toHaveBeenCalledWith({
       user_id: userId,
       ...params,
+      time_zone: 'Asia/Manila',
       description: null,
       date_start: null,
       date_end: null,
@@ -129,6 +130,7 @@ describe('AvailabilityRulesService', () => {
       day_of_week: null,
       start_time: null,
       end_time: null,
+      time_zone: null,
       is_active: true,
     });
   });
@@ -140,9 +142,7 @@ describe('AvailabilityRulesService', () => {
       // Missing day_of_week, start_time, end_time
     };
 
-    await expect(service.create(userId, params)).rejects.toThrow(
-      'Weekly window rules require day_of_week, start_time, and end_time',
-    );
+    await expect(service.create(userId, params)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('throws error when creating a blackout window rule with missing fields', async () => {
@@ -152,9 +152,7 @@ describe('AvailabilityRulesService', () => {
       // Missing date_start, date_end
     };
 
-    await expect(service.create(userId, params)).rejects.toThrow(
-      'Blackout window rules require date_start and date_end',
-    );
+    await expect(service.create(userId, params)).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('updates an existing rule', async () => {
@@ -166,6 +164,7 @@ describe('AvailabilityRulesService', () => {
       day_of_week: 1,
       start_time: '09:00',
       end_time: '17:00',
+      time_zone: 'Asia/Manila',
       description: null,
       date_start: null,
       date_end: null,
@@ -208,6 +207,7 @@ describe('AvailabilityRulesService', () => {
       day_of_week: 1,
       start_time: '09:00',
       end_time: '17:00',
+      time_zone: 'Asia/Manila',
       description: null,
       date_start: null,
       date_end: null,
@@ -220,7 +220,7 @@ describe('AvailabilityRulesService', () => {
       service.update({ userId: 'user-1', role: 'PSYCHOLOGIST' as UserRole }, ruleId, {
         rule_type: 'weekly_window',
       }),
-    ).rejects.toThrow('Weekly window rules require day_of_week, start_time, and end_time');
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('throws error when updating a blackout window rule with missing fields', async () => {
