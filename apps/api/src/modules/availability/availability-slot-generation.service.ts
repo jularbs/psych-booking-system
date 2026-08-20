@@ -4,8 +4,7 @@ import { AvailabilityRulesService } from '../availability-rules/availability-rul
 import { TimeRange, GeneratedAvailabilitySlot } from './availability-slot.types';
 import { QueryAvailabilitySlotsDto } from './dto/query-availability-slots.dto';
 import { DateTime } from 'luxon';
-import { DEFAULT_SCHEDULING_TIMEZONE } from './availability.constants';
-import { combineLocalDayAndTime, convertToUTC } from '../../common/utils/date.utils';
+import { combineLocalDayAndTime, isValidIsoWithOffset } from '../../common/utils/date.utils';
 @Injectable()
 export class AvailabilitySlotGenerationService {
   constructor(
@@ -15,18 +14,17 @@ export class AvailabilitySlotGenerationService {
 
   async querySlots(
     params: QueryAvailabilitySlotsDto & { user_id: string },
-  ): Promise<{ slots: GeneratedAvailabilitySlot[]; time_zone: string }> {
-    const timeZone = params.time_zone ?? DEFAULT_SCHEDULING_TIMEZONE;
-
-    if (!DateTime.now().setZone(timeZone).isValid) {
-      throw new BadRequestException('Invalid time zone');
+  ): Promise<{ slots: GeneratedAvailabilitySlot[] }> {
+    if (!isValidIsoWithOffset(params.time_min) || !isValidIsoWithOffset(params.time_max)) {
+      throw new BadRequestException(
+        'time_min or time_max should be ISO8601 format with proper offset.',
+      );
     }
-
-    const windowStartUtc = convertToUTC(params.time_min, timeZone);
-    const windowEndUtc = convertToUTC(params.time_max, timeZone);
+    const windowStartUtc = DateTime.fromISO(params.time_min).toUTC();
+    const windowEndUtc = DateTime.fromISO(params.time_max).toUTC();
 
     if (!windowStartUtc.isValid || !windowEndUtc.isValid) {
-      throw new BadRequestException('Invalid time range');
+      throw new BadRequestException('time_min or time_max is not valid.');
     }
 
     if (windowStartUtc >= windowEndUtc) {
@@ -42,7 +40,6 @@ export class AvailabilitySlotGenerationService {
       user_id: params.user_id,
       time_min: params.time_min,
       time_max: params.time_max,
-      time_zone: timeZone,
     });
 
     const busyWindows = busyResponse.busy_times.map((busy) => ({
@@ -60,7 +57,7 @@ export class AvailabilitySlotGenerationService {
       params.slot_interval_minutes,
     );
 
-    return { slots, time_zone: timeZone };
+    return { slots };
   }
 
   private buildAvailabilityWindows(

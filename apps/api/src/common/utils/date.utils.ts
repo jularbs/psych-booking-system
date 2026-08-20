@@ -9,6 +9,13 @@ export function convertToUTC(value: string, timeZone: string): DateTime {
   return parsed.toUTC();
 }
 
+export function isValidIsoWithOffset(value: string) {
+  const regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+  if (!regex.test(value)) return false;
+
+  return !isNaN(Date.parse(value)); // Ensures it's a real calendar date
+}
+
 export function combineLocalDayAndTime(day: DateTime, time: string): DateTime {
   const [hours, minutes, seconds] = time.split(':').map(Number);
 
