@@ -28,6 +28,10 @@ export class BookingsService {
   }
 
   async create(params: CreateBookingDto & { user_id: string }) {
+    if (!params.user_id) {
+      throw new BadRequestException('User ID is required to create a booking');
+    }
+
     if (!isValidIsoWithOffset(params.starts_at) || !isValidIsoWithOffset(params.ends_at)) {
       throw new BadRequestException('Invalid start or end time format');
     }

@@ -4,6 +4,7 @@ import { BookingsRepository } from './bookings.repository';
 import { AvailabilitySlotValidationService } from '../availability/availability-slot-validation.service';
 import { ServicesService } from '../services/services.service';
 import { BadRequestException } from '@nestjs/common';
+import { CreateBookingDto } from './dto/create-booking.dto';
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -200,5 +201,20 @@ describe('BookingsService', () => {
     };
 
     await expect(service.create(params)).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('throws BadRequestException when user_id is missing', async () => {
+    const params = {
+      service_id: 'service-1',
+      customer_name: 'John Doe',
+      customer_email: 'user@example.com',
+      starts_at: '2024-06-01T10:00:00Z',
+      ends_at: '2024-06-01T11:00:00Z',
+      time_zone: 'Asia/Manila',
+    };
+
+    await expect(
+      service.create(params as CreateBookingDto & { user_id: string }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
